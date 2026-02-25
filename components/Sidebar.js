@@ -2,8 +2,11 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import styles from './Sidebar.module.css';
+import { useAuth } from './AuthProvider';
+import { supabase } from '@/lib/supabase';
+import { useToast } from './Toast';
 
 const menuItems = [
   {
@@ -69,7 +72,10 @@ const menuItems = [
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { user } = useAuth();
+  const { addToast } = useToast();
 
   const isActive = (item) => {
     const href = item.href;
@@ -80,9 +86,22 @@ export default function Sidebar() {
     return pathname.startsWith(href);
   };
 
+  const handleLogout = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      addToast('Berhasil logout', 'success');
+      router.push('/login');
+    } catch (error) {
+      addToast('Gagal logout: ' + error.message, 'error');
+    }
+  };
+
+  const initial = user?.email ? user.email.charAt(0).toUpperCase() : 'A';
+  const userName = user?.email?.split('@')[0] || 'Admin Sarpras';
+
   return (
     <>
-      {/* Mobile Hamburger Button */}
       <button
         className={styles.hamburger}
         onClick={() => setMobileOpen(true)}
@@ -95,7 +114,6 @@ export default function Sidebar() {
         </svg>
       </button>
 
-      {/* Overlay for mobile */}
       {mobileOpen && (
         <div
           className={styles.overlay}
@@ -104,7 +122,6 @@ export default function Sidebar() {
       )}
 
       <aside className={`${styles.sidebar} ${mobileOpen ? styles.open : ''}`}>
-        {/* Logo & Brand */}
         <div className={styles.brand}>
           <div className={styles.logoIcon}>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -117,7 +134,6 @@ export default function Sidebar() {
             <span className={styles.brandSub}>Attanwir</span>
           </div>
 
-          {/* Close button for mobile */}
           <button
             className={styles.closeBtn}
             onClick={() => setMobileOpen(false)}
@@ -130,7 +146,6 @@ export default function Sidebar() {
           </button>
         </div>
 
-        {/* Navigation */}
         <nav className={styles.nav}>
           <p className={styles.navLabel}>MENU UTAMA</p>
           <ul className={styles.menuList}>
@@ -153,17 +168,27 @@ export default function Sidebar() {
           </ul>
         </nav>
 
-        {/* Footer */}
         <div className={styles.sidebarFooter}>
           <div className={styles.footerUser}>
             <div className={styles.footerAvatar}>
-              <span>A</span>
+              <span>{initial}</span>
             </div>
             <div className={styles.footerUserInfo}>
-              <span className={styles.footerUserName}>Admin Sarpras</span>
+              <span className={styles.footerUserName} style={{ textTransform: 'capitalize' }}>{userName}</span>
               <span className={styles.footerUserRole}>Administrator</span>
             </div>
           </div>
+          <button 
+            className={styles.logoutBtn} 
+            onClick={handleLogout}
+            title="Keluar dari sistem"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M18.36 6.64a9 9 0 1 1-12.73 0" />
+              <line x1="12" y1="2" x2="12" y2="12" />
+            </svg>
+            <span>Logout</span>
+          </button>
         </div>
       </aside>
     </>

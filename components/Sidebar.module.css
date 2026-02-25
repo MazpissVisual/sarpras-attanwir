@@ -244,6 +244,40 @@
   font-weight: 500;
 }
 
+.logoutBtn {
+  width: 100%;
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px;
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.logoutBtn:hover {
+  background: #dc2626;
+  color: #ffffff;
+  border-color: #dc2626;
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.2);
+}
+
+.logoutBtn svg {
+  transition: transform 0.2s ease;
+}
+
+.logoutBtn:hover svg {
+  transform: translateX(-1px);
+}
+
 /* ========== Mobile Responsive ========== */
 @media (max-width: 768px) {
   .hamburger {

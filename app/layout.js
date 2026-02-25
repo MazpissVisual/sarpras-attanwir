@@ -1,6 +1,7 @@
 import "./globals.css";
-import Sidebar from "@/components/Sidebar";
 import { ToastProvider } from "@/components/Toast";
+import { AuthProvider } from "@/components/AuthProvider";
+import MainLayout from "@/components/MainLayout";
 
 export const metadata = {
   title: "Sarpras Digital Attanwir",
@@ -34,10 +35,11 @@ export default function RootLayout({ children }) {
       </head>
       <body>
         <ToastProvider>
-          <div className="appLayout">
-            <Sidebar />
-            <main className="mainContent">{children}</main>
-          </div>
+          <AuthProvider>
+            <MainLayout>
+              {children}
+            </MainLayout>
+          </AuthProvider>
         </ToastProvider>
       </body>
     </html>
