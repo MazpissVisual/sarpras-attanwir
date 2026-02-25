@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import Header from '@/components/Header';
 import { useToast } from '@/components/Toast';
-import CameraCapture from '@/components/CameraCapture';
+// CameraCapture removed in favor of native camera input
 import { supabase } from '@/lib/supabase';
 import { compressImage } from '@/lib/imageCompression';
 import styles from './page.module.css';
@@ -98,6 +98,7 @@ export default function KerusakanPage() {
 
   // Photo upload state
   const fileInputRef = useRef(null);
+  const nativeCameraRef = useRef(null);
   const [cameraOpen, setCameraOpen] = useState(false);
   const [fotoFile, setFotoFile] = useState(null);
   const [fotoPreview, setFotoPreview] = useState(null);
@@ -140,8 +141,8 @@ export default function KerusakanPage() {
   };
 
   // ===== Camera Capture Handler =====
-  const handleCameraCapture = async (file) => {
-    setCameraOpen(false);
+  const handleCameraCapture = async (e) => {
+    const file = e.target.files?.[0];
     if (!file) return;
 
     const compressed = await compressImage(file, 200);
@@ -483,7 +484,7 @@ export default function KerusakanPage() {
                   <label className="formLabel">Foto Kerusakan (opsional)</label>
                   {!fotoPreview ? (
                     <div className={styles.photoButtons}>
-                      <button type="button" className={styles.photoBtn} onClick={() => setCameraOpen(true)}>
+                      <button type="button" className={styles.photoBtn} onClick={() => nativeCameraRef.current?.click()}>
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                           <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
                           <circle cx="12" cy="13" r="4" />
@@ -498,7 +499,7 @@ export default function KerusakanPage() {
                         </svg>
                         Pilih dari Galeri
                       </button>
-                      <input ref={fileInputRef} type="file" accept="image/*" onChange={handlePhotoSelect} hidden />
+                      {/* Hidden inputs moved to bottom for cleanliness */}
                     </div>
                   ) : (
                     <div className={styles.photoPreview}>
@@ -640,13 +641,22 @@ export default function KerusakanPage() {
         </div>
       </div>
 
-      {/* Camera Modal */}
-      {cameraOpen && (
-        <CameraCapture
-          onCapture={handleCameraCapture}
-          onClose={() => setCameraOpen(false)}
-        />
-      )}
+      {/* Hidden Native Interaction Inputs */}
+      <input 
+        ref={fileInputRef} 
+        type="file" 
+        accept="image/*" 
+        onChange={handlePhotoSelect} 
+        hidden 
+      />
+      <input 
+        ref={nativeCameraRef} 
+        type="file" 
+        accept="image/*" 
+        capture="environment" 
+        onChange={handleCameraCapture} 
+        hidden 
+      />
     </>
   );
 }

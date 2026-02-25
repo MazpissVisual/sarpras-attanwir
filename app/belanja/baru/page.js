@@ -4,7 +4,7 @@ import { useState, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Header from '@/components/Header';
 import { useToast } from '@/components/Toast';
-import CameraCapture from '@/components/CameraCapture';
+// CameraCapture removed in favor of native camera input
 import { supabase } from '@/lib/supabase';
 import { compressImage } from '@/lib/imageCompression';
 import styles from './page.module.css';
@@ -39,7 +39,8 @@ export default function BelanjaBaru() {
   const router = useRouter();
   const { addToast } = useToast();
   const fileInputRef = useRef(null);
-  const [cameraOpen, setCameraOpen] = useState(false);
+  const nativeCameraRef = useRef(null);
+  const [cameraOpen, setCameraOpen] = useState(false); // We can still use this state to show/hide the UI if needed, but for native we'll trigger the ref
 
   // ===== Form Header =====
   const [header, setHeader] = useState({
@@ -133,8 +134,8 @@ export default function BelanjaBaru() {
   };
 
   // ===== Camera Capture Handler =====
-  const handleCameraCapture = async (file) => {
-    setCameraOpen(false);
+  const handleCameraCapture = async (e) => {
+    const file = e.target.files?.[0];
     if (!file) return;
 
     const compressed = await compressImage(file, 200);
@@ -638,13 +639,14 @@ export default function BelanjaBaru() {
 
             {!notaPreview ? (
               <div className={styles.photoButtons}>
-                <button type="button" className={styles.photoBtn} onClick={() => setCameraOpen(true)}>
+                {/* Trigger Native Camera */}
+                <button type="button" className={styles.photoBtn} onClick={() => nativeCameraRef.current?.click()}>
                   <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
                     <circle cx="12" cy="13" r="4" />
                   </svg>
                   <p><strong>Ambil Foto</strong></p>
-                  <small>Buka kamera untuk foto langsung</small>
+                  <small>Gunakan kamera bawaan HP</small>
                 </button>
                 <button type="button" className={styles.photoBtn} onClick={() => fileInputRef.current?.click()}>
                   <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -655,7 +657,8 @@ export default function BelanjaBaru() {
                   <p><strong>Pilih dari Galeri</strong></p>
                   <small>PNG, JPG, JPEG (maks. 5MB)</small>
                 </button>
-                <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileSelect} hidden />
+                
+                {/* Hidden inputs are moved to bottom for cleanliness */}
               </div>
             ) : (
               <div className={styles.previewContainer}>
@@ -719,13 +722,22 @@ export default function BelanjaBaru() {
         </div>
       </div>
 
-      {/* Camera Modal */}
-      {cameraOpen && (
-        <CameraCapture
-          onCapture={handleCameraCapture}
-          onClose={() => setCameraOpen(false)}
-        />
-      )}
+      {/* Hidden Native Interaction Inputs */}
+      <input 
+        ref={fileInputRef} 
+        type="file" 
+        accept="image/*" 
+        onChange={handleFileSelect} 
+        hidden 
+      />
+      <input 
+        ref={nativeCameraRef} 
+        type="file" 
+        accept="image/*" 
+        capture="environment" 
+        onChange={handleCameraCapture} 
+        hidden 
+      />
     </>
   );
 }
