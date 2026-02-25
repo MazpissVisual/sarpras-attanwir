@@ -1,0 +1,280 @@
+/* ========== Filter Bar ========== */
+.filterBar {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  padding: 20px 24px;
+  background: #fff;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+}
+
+.filterGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 120px;
+}
+
+.exportBtn {
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+.btnSpinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ========== Summary Grid ========== */
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.summaryCard {
+  background: #fff;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.summaryLabel {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.summaryValue {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--color-text-primary);
+  letter-spacing: -0.3px;
+}
+
+.summaryCount {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.summarySuccess {
+  border-left: 4px solid var(--color-success);
+}
+.summarySuccess .summaryValue { color: var(--color-success); }
+
+.summaryInfo {
+  border-left: 4px solid var(--color-primary);
+}
+.summaryInfo .summaryValue { color: var(--color-primary); }
+
+.summaryDanger {
+  border-left: 4px solid var(--color-danger);
+}
+.summaryDanger .summaryValue { color: var(--color-danger); }
+
+/* ========== Table Section ========== */
+.tableSection {
+  background: #fff;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.tableSectionHeader {
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.tableSectionHeader h3 {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.tableScroll {
+  overflow-x: auto;
+}
+
+.dateCell {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.kategoriTag {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  background: var(--color-border-light);
+  padding: 3px 10px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+/* States */
+.loadingState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  gap: 14px;
+}
+
+.loadingState p {
+  font-size: 14px;
+  color: var(--color-text-muted);
+}
+
+.spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid var(--color-border);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  text-align: center;
+  gap: 10px;
+}
+
+.emptyState h4 {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+}
+
+.emptyState p {
+  font-size: 14px;
+  color: #cbd5e1;
+}
+
+/* ========== Mobile Cards (Laporan) ========== */
+.mobileCards {
+  display: none;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+}
+
+.reportMobileCard {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.cardDate {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.cardTitle {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.cardMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.cardBottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 10px;
+  border-top: 1px solid var(--color-border-light);
+}
+
+.cardPrice {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--color-primary);
+}
+
+/* ========== Responsive ========== */
+@media (max-width: 1024px) {
+  .summaryGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .filterBar {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 16px;
+    gap: 12px;
+  }
+
+  .filterGroup {
+    min-width: 0;
+  }
+
+  .exportBtn {
+    margin-left: 0;
+    width: 100%;
+    justify-content: center;
+    padding: 12px;
+  }
+
+  .tableScroll {
+    display: none;
+  }
+
+  .mobileCards {
+    display: flex;
+  }
+
+  .tableSectionHeader {
+    padding: 14px 16px;
+  }
+}
+
+@media (max-width: 580px) {
+  .summaryGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .summaryValue {
+    font-size: 18px;
+  }
+}

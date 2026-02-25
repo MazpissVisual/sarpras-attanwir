@@ -1,0 +1,602 @@
+/* ========== Form Wrapper ========== */
+.formWrapper {
+  max-width: 900px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* ========== Section ========== */
+.section {
+  background: #fff;
+  border: 1px solid #e8ecf1;
+  border-radius: 16px;
+  padding: 24px;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.sectionIcon {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #eff6ff;
+  color: #2563eb;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+.sectionHeader h2 {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1e293b;
+  flex: 1;
+}
+
+.optionalTag {
+  font-size: 11px;
+  font-weight: 600;
+  color: #94a3b8;
+  background: #f1f5f9;
+  padding: 3px 10px;
+  border-radius: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+/* ========== Form Grid ========== */
+.formGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 0 20px;
+}
+
+.formGrid .formGroup:first-child {
+  grid-column: 1 / -1;
+}
+
+/* ========== Item Table (Desktop) ========== */
+.tableWrapper {
+  overflow-x: auto;
+  border: 1px solid #e8ecf1;
+  border-radius: 12px;
+}
+
+.itemTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.itemTable thead {
+  background: #f8fafc;
+}
+
+.itemTable th {
+  padding: 12px 14px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid #e8ecf1;
+  white-space: nowrap;
+}
+
+.itemTable td {
+  padding: 8px 10px;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
+}
+
+.itemTable tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.itemTable tbody tr:hover {
+  background: #fafbfd;
+}
+
+/* Column widths */
+.thNo { width: 44px; text-align: center; }
+.thNama { min-width: 200px; }
+.thJumlah { width: 90px; }
+.thSatuan { width: 100px; }
+.thHarga { min-width: 160px; }
+.thTotal { width: 140px; }
+.thAction { width: 48px; }
+.colNo { text-align: center; color: #94a3b8; font-weight: 600; font-size: 12px; }
+.colTotal { font-weight: 700; color: #1e293b; white-space: nowrap; font-size: 13px; }
+
+/* Table inputs */
+.tableInput {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #e8ecf1;
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: inherit;
+  color: #1e293b;
+  background: #fff;
+  transition: all 0.2s ease;
+  outline: none;
+}
+
+.tableInput:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08);
+}
+
+.inputSmall {
+  max-width: 80px;
+}
+
+.tableSelect {
+  padding: 8px 12px;
+  border: 1px solid #e8ecf1;
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: inherit;
+  color: #1e293b;
+  background: #fff;
+  cursor: pointer;
+  outline: none;
+  min-width: 80px;
+}
+
+.tableSelect:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08);
+}
+
+/* Price input with prefix */
+.priceInput {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+.pricePrefix {
+  padding: 8px 10px;
+  background: #f1f5f9;
+  border: 1px solid #e8ecf1;
+  border-right: none;
+  border-radius: 8px 0 0 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  white-space: nowrap;
+}
+
+.priceInput .tableInput {
+  border-radius: 0 8px 8px 0;
+}
+
+.priceInputMobile {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+.priceInputMobile .pricePrefix {
+  padding: 10px 12px;
+}
+
+.priceInputMobile .formInput {
+  border-radius: 0 10px 10px 0;
+  border-left: none;
+}
+
+/* Remove button */
+.removeBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid #e8ecf1;
+  border-radius: 8px;
+  background: #fff;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.removeBtn:hover:not(:disabled) {
+  background: #fef2f2;
+  color: #dc2626;
+  border-color: #fecaca;
+}
+
+.removeBtn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* Add item button in header */
+.addItemBtn {
+  font-size: 12px !important;
+  padding: 7px 14px !important;
+}
+
+/* ========== Mobile Items (hidden on desktop) ========== */
+.mobileItems {
+  display: none;
+}
+
+.mobileCard {
+  background: #fafbfd;
+  border: 1px solid #e8ecf1;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mobileCardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.mobileCardNo {
+  font-size: 12px;
+  font-weight: 700;
+  color: #2563eb;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.mobileCardRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.mobileCardTotal {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 10px;
+  border-top: 1px solid #e8ecf1;
+  font-size: 13px;
+  color: #64748b;
+}
+
+.mobileCardTotal strong {
+  font-size: 15px;
+  color: #1e293b;
+}
+
+.mobileAddBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 14px;
+  background: #eff6ff;
+  color: #2563eb;
+  border: 2px dashed #bfdbfe;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.mobileAddBtn:hover {
+  background: #dbeafe;
+  border-color: #93c5fd;
+}
+
+/* ========== Grand Total ========== */
+.grandTotal {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 20px;
+  background: linear-gradient(135deg, #eff6ff, #dbeafe);
+  border-radius: 14px;
+  margin-top: 16px;
+  border: 1px solid #bfdbfe;
+}
+
+.grandTotalLabel {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.grandTotalLabel span {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.grandTotalLabel small {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.grandTotalValue {
+  font-size: 24px;
+  font-weight: 800;
+  color: #2563eb;
+  letter-spacing: -0.5px;
+  text-align: right;
+}
+
+
+/* ========== Photo Upload Buttons ========== */
+.photoButtons {
+  display: flex;
+  gap: 12px;
+}
+
+.photoBtn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 28px 16px;
+  border: 2px dashed #d1d5db;
+  border-radius: 14px;
+  background: #fafbfd;
+  color: #64748b;
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+}
+
+.photoBtn:hover {
+  border-color: #2563eb;
+  background: #fafbff;
+  color: #2563eb;
+}
+
+.photoBtn p {
+  font-size: 14px;
+  margin: 0;
+}
+
+.photoBtn p strong {
+  color: inherit;
+}
+
+.photoBtn small {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.photoBtn:hover small {
+  color: #60a5fa;
+}
+
+.photoBtn svg {
+  color: #94a3b8;
+  transition: color 0.2s;
+}
+
+.photoBtn:hover svg {
+  color: #2563eb;
+}
+
+/* ========== Preview ========== */
+.previewContainer {
+  border: 1px solid #e8ecf1;
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.previewImage {
+  max-height: 300px;
+  overflow: hidden;
+  background: #f8fafc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.previewImage img {
+  max-width: 100%;
+  max-height: 300px;
+  object-fit: contain;
+}
+
+.previewInfo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-top: 1px solid #e8ecf1;
+  background: #fafbfd;
+}
+
+.previewFile {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #1e293b;
+  font-weight: 500;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.previewFile span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.previewFile small {
+  color: #94a3b8;
+  white-space: nowrap;
+}
+
+.removeFileBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #dc2626;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.removeFileBtn:hover {
+  background: #fee2e2;
+  border-color: #dc2626;
+}
+
+/* ========== Save Bar ========== */
+.saveBar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 20px 24px;
+  background: #fff;
+  border: 1px solid #e8ecf1;
+  border-radius: 16px;
+  position: sticky;
+  bottom: 16px;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.06);
+}
+
+.saveBtn {
+  min-width: 180px;
+}
+
+.btnSpinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ========== Responsive ========== */
+@media (max-width: 992px) {
+  .formGrid {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+}
+
+/* ========== Responsive ========== */
+@media (max-width: 768px) {
+  .formWrapper {
+    gap: 16px;
+    padding-bottom: 100px; /* Space for the sticky saveBar */
+  }
+
+  .section {
+    padding: 18px 16px;
+    border-radius: 14px;
+  }
+
+  .sectionHeader {
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 18px;
+    padding-bottom: 14px;
+  }
+
+  .sectionHeader h2 {
+    font-size: 15px;
+    flex: 1;
+    min-width: 120px;
+  }
+
+  /* Hide table, show mobile cards */
+  .tableWrapper {
+    display: none;
+  }
+
+  .addItemBtn {
+    display: none !important;
+  }
+
+  .mobileItems {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .grandTotal {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 16px;
+  }
+
+  .grandTotalValue {
+    font-size: 22px;
+    text-align: left;
+    width: 100%;
+  }
+
+  .saveBar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    border-radius: 0;
+    padding: 12px 16px;
+    padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    z-index: 100;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
+    background: #fff;
+  }
+
+  .saveBtn {
+    flex: 2;
+    min-width: 0;
+  }
+
+  .btnBatal {
+    flex: 1;
+  }
+
+  .photoButtons {
+    flex-direction: column;
+  }
+}
+
+@media (min-width: 769px) {
+  .mobileItems {
+    display: none;
+  }
+}

@@ -1,33 +1,78 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+/* ========== Design Tokens ========== */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Colors - Light Mode */
+  --color-primary: #2563eb;
+  --color-primary-dark: #1d4ed8;
+  --color-primary-light: #eff6ff;
+  --color-primary-subtle: #dbeafe;
+
+  --color-success: #16a34a;
+  --color-success-bg: #f0fdf4;
+  --color-warning: #f59e0b;
+  --color-warning-bg: #fffbeb;
+  --color-danger: #dc2626;
+  --color-danger-bg: #fef2f2;
+  --color-info: #0ea5e9;
+  --color-info-bg: #f0f9ff;
+
+  /* Neutrals */
+  --color-bg: #f8fafc;
+  --color-surface: #ffffff;
+  --color-border: #e8ecf1;
+  --color-border-light: #f1f5f9;
+  --color-text-primary: #1e293b;
+  --color-text-secondary: #64748b;
+  --color-text-muted: #94a3b8;
+
+  /* Spacing */
+  --sidebar-width: 260px;
+  --sidebar-collapsed-width: 72px;
+  --header-height: 72px;
+
+  /* Radius */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
+
+  /* Shadows */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.08);
+
+  /* Typography */
+  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ========== Reset ========== */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
-html,
-body {
+html {
+  color-scheme: light;
+  scroll-behavior: smooth;
+}
+
+html, body {
   max-width: 100vw;
   overflow-x: hidden;
 }
 
 body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-family);
+  background: var(--color-bg);
+  color: var(--color-text-primary);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-}
-
-* {
-  box-sizing: border-box;
-  padding: 0;
-  margin: 0;
+  line-height: 1.6;
 }
 
 a {
@@ -35,8 +80,236 @@ a {
   text-decoration: none;
 }
 
-@media (prefers-color-scheme: dark) {
-  html {
-    color-scheme: dark;
+img {
+  max-width: 100%;
+  display: block;
+}
+
+/* ========== App Layout ========== */
+.appLayout {
+  display: flex;
+  min-height: 100vh;
+}
+
+.mainContent {
+  flex: 1;
+  margin-left: var(--sidebar-width);
+  min-height: 100vh;
+  transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.pageContent {
+  padding: 28px 32px;
+}
+
+/* ========== Utility Classes ========== */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: var(--font-family);
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.btnPrimary {
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
+}
+
+.btnPrimary:hover {
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+  transform: translateY(-1px);
+}
+
+.btnSecondary {
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border);
+}
+
+.btnSecondary:hover {
+  background: var(--color-border-light);
+}
+
+.btnDanger {
+  background: var(--color-danger);
+  color: #fff;
+}
+
+.btnDanger:hover {
+  background: #b91c1c;
+}
+
+.btnSuccess {
+  background: var(--color-success);
+  color: #fff;
+}
+
+.btnSuccess:hover {
+  background: #15803d;
+}
+
+/* Badge */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 6px;
+}
+
+.badgeSuccess {
+  background: var(--color-success-bg);
+  color: var(--color-success);
+}
+
+.badgeWarning {
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+}
+
+.badgeDanger {
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+}
+
+.badgeInfo {
+  background: var(--color-info-bg);
+  color: var(--color-info);
+}
+
+/* Table */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.table th {
+  text-align: left;
+  padding: 12px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-border-light);
+}
+
+.table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--color-border-light);
+  color: var(--color-text-primary);
+}
+
+.table tbody tr {
+  transition: background 0.15s ease;
+}
+
+.table tbody tr:hover {
+  background: var(--color-border-light);
+}
+
+/* Card */
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+}
+
+/* Form */
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.formLabel {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.formInput,
+.formSelect,
+.formTextarea {
+  padding: 10px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-family: var(--font-family);
+  color: var(--color-text-primary);
+  background: var(--color-surface);
+  transition: all 0.2s ease;
+  outline: none;
+}
+
+.formInput:focus,
+.formSelect:focus,
+.formTextarea:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.formTextarea {
+  resize: vertical;
+  min-height: 100px;
+}
+
+/* ========== Responsive (Mobile-first) ========== */
+/* ========== Responsive Fix (Sangat Direkomendasikan) ========== */
+@media (max-width: 768px) {
+  /* 1. Paksa mainContent buat selalu punya ruang napas di bawah */
+  .mainContent {
+    margin-left: 0 !important;
+    min-height: 100dvh !important; /* Gunakan Dynamic Viewport Height */
+    padding-bottom: 200px !important; /* Naikin drastis buat ngetes */
+    display: block !important;
+    overflow-y: visible !important;
+  }
+
+  /* 2. PageContent jangan dikunci tingginya */
+  .pageContent {
+    padding: 16px 12px 100px 12px !important;
+    min-height: auto !important; 
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  /* 3. Khusus tombol simpan biar gak nabrak dock iPhone X */
+  .formActionContainer {
+    position: relative !important; /* Ubah dari sticky ke relative dulu buat ngetes */
+    margin-top: 40px !important;
+    padding-bottom: env(safe-area-inset-bottom, 32px) !important;
+    background: transparent !important;
+    border: none !important;
+  }
+}
+
+/* 4. Perbaikan Global buat iOS Safari */
+@supports (-webkit-touch-callout: none) {
+  body {
+    /* Mencegah bouncing yang aneh di iOS */
+    overflow-x: hidden;
   }
 }
