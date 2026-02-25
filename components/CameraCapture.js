@@ -37,12 +37,27 @@ export default function CameraCapture({ onCapture, onClose }) {
           facingMode: facing,
           width: { min: 1280, ideal: 1920 },
           height: { min: 720, ideal: 1080 },
-          aspectRatio: { ideal: 1.7777777778 }, // 16:9 for better mobile support
+          aspectRatio: { ideal: 1.7777777778 },
+          // Request continuous focus if supported
+          focusMode: 'continuous',
         },
         audio: false,
       });
 
       streamRef.current = stream;
+
+      // Try to apply advanced constraints to enable autofocus on track after start
+      try {
+        const track = stream.getVideoTracks()[0];
+        const capabilities = (typeof track.getCapabilities === 'function') ? track.getCapabilities() : {};
+        if (capabilities.focusMode && capabilities.focusMode.includes('continuous')) {
+          await track.applyConstraints({
+            advanced: [{ focusMode: 'continuous' }]
+          });
+        }
+      } catch (e) {
+        console.warn('Advanced camera constraints not supported:', e);
+      }
 
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
