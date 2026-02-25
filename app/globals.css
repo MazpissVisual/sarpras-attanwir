@@ -253,6 +253,8 @@ img {
 .formInput,
 .formSelect,
 .formTextarea {
+  width: 100%;
+  max-width: 100%;
   padding: 10px 14px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
@@ -262,6 +264,7 @@ img {
   background: var(--color-surface);
   transition: all 0.2s ease;
   outline: none;
+  box-sizing: border-box;
 }
 
 .formInput:focus,
@@ -278,7 +281,7 @@ img {
 
 /* ========== Responsive (Mobile-first) ========== */
 /* ========== Responsive Fix (Sangat Direkomendasikan) ========== */
-@media (max-width: 768px) {
+@media (max-width: 1024px) {
   /* 1. Paksa mainContent buat selalu punya ruang napas di bawah */
   .mainContent {
     margin-left: 0 !important;
@@ -290,7 +293,7 @@ img {
 
   /* 2. PageContent jangan dikunci tingginya */
   .pageContent {
-    padding: 16px 12px 100px 12px !important;
+    padding: 16px 16px 100px 16px !important;
     min-height: auto !important; 
     height: auto !important;
     overflow: visible !important;

@@ -87,7 +87,7 @@
   transform: scale(1.05);
 }
 
-@media (max-width: 768px) {
+@media (max-width: 1024px) {
   .header {
     padding: 12px 12px 12px 64px;
     min-height: 64px;
