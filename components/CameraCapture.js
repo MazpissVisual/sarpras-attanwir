@@ -35,8 +35,9 @@ export default function CameraCapture({ onCapture, onClose }) {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           facingMode: facing,
-          width: { ideal: 1280 },
-          height: { ideal: 960 },
+          width: { min: 1280, ideal: 1920 },
+          height: { min: 720, ideal: 1080 },
+          aspectRatio: { ideal: 1.7777777778 }, // 16:9 for better mobile support
         },
         audio: false,
       });
