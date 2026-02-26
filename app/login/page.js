@@ -10,6 +10,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
   const router = useRouter();
   const { addToast } = useToast();
 
@@ -25,12 +26,15 @@ export default function LoginPage() {
 
       if (error) throw error;
 
+      setIsSuccess(true);
       addToast('Login berhasil! Selamat datang.', 'success');
+      
+      // Do not stop loading here, let it redirect natively
       router.push('/');
     } catch (error) {
-      addToast(error.message || 'Gagal login. Periksa email dan password.', 'error');
-    } finally {
       setLoading(false);
+      setIsSuccess(false);
+      addToast(error.message || 'Gagal login. Periksa email dan password.', 'error');
     }
   };
 
@@ -71,8 +75,20 @@ export default function LoginPage() {
             />
           </div>
 
-          <button type="submit" className={styles.loginBtn} disabled={loading}>
-            {loading ? <div className={styles.spinner} /> : 'Masuk ke Sistem'}
+          <button type="submit" className={`${styles.loginBtn} ${isSuccess ? styles.successBtn : ''}`} disabled={loading || isSuccess}>
+            {isSuccess ? (
+              <span className={styles.transitionText}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '8px' }}>
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                  <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                </svg>
+                Mengalihkan...
+              </span>
+            ) : loading ? (
+              <div className={styles.spinner} />
+            ) : (
+              'Masuk ke Sistem'
+            )}
           </button>
         </form>
 

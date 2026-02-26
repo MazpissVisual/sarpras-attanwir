@@ -45,6 +45,15 @@ const menuItems = [
     ),
   },
   {
+    label: 'Riwayat Stok',
+    href: '/riwayat-stok',
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+      </svg>
+    ),
+  },
+  {
     label: 'Laporan Kerusakan',
     href: '/kerusakan',
     icon: (
@@ -74,7 +83,7 @@ export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { user } = useAuth();
+  const { user, userProfile } = useAuth();
   const { addToast } = useToast();
 
   const isActive = (item) => {
@@ -152,6 +161,23 @@ export default function Sidebar() {
           <ul className={styles.menuList}>
             {menuItems.map((item) => {
               const active = isActive(item);
+              
+              // Validate dynamic rights
+              const isAdmin = userProfile?.role === 'superadmin' || userProfile?.role === 'admin';
+              const routeToRightMap = {
+                '/belanja/baru': 'Belanja',
+                '/inventaris': 'Inventaris',
+                '/riwayat-stok': 'Riwayat Stok',
+                '/kerusakan': 'Kerusakan',
+                '/laporan': 'Laporan'
+              };
+              const reqRight = routeToRightMap[item.href];
+              
+              // Hide menu if user implies standard staff/kepsek and lacks required module badge
+              if (!isAdmin && reqRight && !(userProfile?.access_rights || []).includes(reqRight)) {
+                return null;
+              }
+
               return (
                 <li key={item.href}>
                   <Link
@@ -166,6 +192,28 @@ export default function Sidebar() {
                 </li>
               );
             })}
+
+            {/* Manajemen User - Super Admin Only */}
+            {userProfile?.role === 'superadmin' && (
+              <li key="/pengaturan-user" style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--color-border)' }}>
+                <p className={styles.navLabel} style={{ marginBottom: '8px', paddingLeft: '4px', fontSize: '11px', fontWeight: 700, color: 'var(--color-text-muted)' }}>ADMIN</p>
+                <Link
+                  href="/pengaturan-user"
+                  className={`${styles.menuItem} ${pathname.startsWith('/pengaturan-user') ? styles.active : ''}`}
+                  onClick={() => setMobileOpen(false)}
+                >
+                  <span className={styles.menuIcon}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M17 21v-2a4 4 0 0 0-4-4H5c-2 0-4 2-4 4v2" />
+                      <circle cx="9" cy="7" r="4" />
+                      <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                    </svg>
+                  </span>
+                  <span className={styles.menuLabel}>Users</span>
+                </Link>
+              </li>
+            )}
           </ul>
         </nav>
 
@@ -175,8 +223,10 @@ export default function Sidebar() {
               <span>{initial}</span>
             </div>
             <div className={styles.footerUserInfo}>
-              <span className={styles.footerUserName} style={{ textTransform: 'capitalize' }}>{userName}</span>
-              <span className={styles.footerUserRole}>Administrator</span>
+              <span className={styles.footerUserName} style={{ textTransform: 'capitalize' }}>{userProfile?.full_name || userName}</span>
+              <span className={styles.footerUserRole} style={{ textTransform: 'capitalize' }}>
+                {userProfile ? (userProfile.role === 'superadmin' ? 'Super Admin' : userProfile.role.replace('_', ' ')) : 'Staff'}
+              </span>
             </div>
           </div>
           <button 

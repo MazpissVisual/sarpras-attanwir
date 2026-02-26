@@ -1,9 +1,11 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useContext } from 'react';
 import Header from '@/components/Header';
 import { useToast } from '@/components/Toast';
+import { AuthContext } from '@/components/AuthProvider';
 import { supabase } from '@/lib/supabase';
+import { adjustStockManual } from '@/lib/stockService';
 import styles from './page.module.css';
 
 const KATEGORI_OPTIONS = [
@@ -21,6 +23,7 @@ const SATUAN_OPTIONS = ['pcs', 'box', 'sak', 'dus', 'rim', 'meter', 'kg', 'liter
 const LOW_STOCK_THRESHOLD = 5;
 
 export default function InventarisPage() {
+  const { userProfile } = useContext(AuthContext);
   const { addToast } = useToast();
 
   const [items, setItems] = useState([]);
@@ -167,7 +170,7 @@ export default function InventarisPage() {
     }
   };
 
-  // ===== UPDATE STOK CEPAT =====
+  // ===== UPDATE STOK CEPAT (via Stock Service) =====
   const handleStockUpdate = async () => {
     if (!stockItem || stockChange === 0) return;
 
@@ -179,29 +182,20 @@ export default function InventarisPage() {
 
     setUpdatingStock(true);
     try {
-      // Update inventory
-      const { error: invError } = await supabase
-        .from('inventory')
-        .update({ stok_saat_ini: newStock })
-        .eq('id', stockItem.id);
+      const result = await adjustStockManual({
+        productId: stockItem.id,
+        change: stockChange,
+        notes: stockNote.trim() || undefined,
+      });
 
-      if (invError) throw invError;
-
-      // Log the change
-      await supabase.from('inventory_stock_log').insert([{
-        inventory_id: stockItem.id,
-        perubahan: stockChange,
-        stok_sebelum: stockItem.stok_saat_ini,
-        stok_sesudah: newStock,
-        keterangan: stockNote.trim() || (stockChange > 0 ? 'Penambahan stok manual' : 'Pengurangan stok manual'),
-      }]);
+      if (!result.success) throw new Error(result.error);
 
       setItems((prev) =>
-        prev.map((i) => (i.id === stockItem.id ? { ...i, stok_saat_ini: newStock } : i))
+        prev.map((i) => (i.id === stockItem.id ? { ...i, stok_saat_ini: result.newStock } : i))
       );
 
       const action = stockChange > 0 ? 'ditambah' : 'dikurangi';
-      addToast(`Stok "${stockItem.nama_barang}" ${action} ${Math.abs(stockChange)} → sekarang ${newStock} ${stockItem.satuan}`, 'success');
+      addToast(`Stok "${stockItem.nama_barang}" ${action} ${Math.abs(stockChange)} → sekarang ${result.newStock} ${stockItem.satuan}`, 'success');
       closeStockModal();
     } catch (err) {
       addToast('Gagal update stok: ' + (err.message || ''), 'error');
@@ -271,6 +265,8 @@ export default function InventarisPage() {
     return 'ok';
   };
 
+  const isReadOnly = !['superadmin', 'admin', 'staff'].includes(userProfile?.role);
+
   return (
     <>
       <Header title="Inventaris Barang" subtitle="Kelola stok aset sarana & prasarana" />
@@ -333,12 +329,14 @@ export default function InventarisPage() {
             </select>
           </div>
 
-          <button className="btn btnPrimary" onClick={openCreateModal}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
-            </svg>
-            Tambah Barang
-          </button>
+          {!isReadOnly && (
+            <button className="btn btnPrimary" onClick={openCreateModal}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+              Tambah Barang
+            </button>
+          )}
         </div>
 
         {/* ===== Table ===== */}
@@ -364,7 +362,7 @@ export default function InventarisPage() {
                       <th>Kategori</th>
                       <th className={styles.thCenter}>Stok</th>
                       <th>Lokasi</th>
-                      <th className={styles.thCenter}>Aksi</th>
+                      {!isReadOnly && <th className={styles.thCenter}>Aksi</th>}
                     </tr>
                   </thead>
                   <tbody>
@@ -395,26 +393,28 @@ export default function InventarisPage() {
                           <td>
                             <span className={styles.lokasi}>{item.lokasi_penyimpanan || '—'}</span>
                           </td>
-                          <td className={styles.tdCenter}>
-                            <div className={styles.actionBtns}>
-                              <button className={`${styles.iconBtn} ${styles.iconBtnStock}`} onClick={() => openStockModal(item)} title="Update stok">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                  <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
-                                </svg>
-                              </button>
-                              <button className={styles.iconBtn} onClick={() => openEditModal(item)} title="Edit">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                                </svg>
-                              </button>
-                              <button className={`${styles.iconBtn} ${styles.iconBtnDanger}`} onClick={() => handleDelete(item)} title="Hapus">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                  <polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                                </svg>
-                              </button>
-                            </div>
-                          </td>
+                          {!isReadOnly && (
+                            <td className={styles.tdCenter}>
+                              <div className={styles.actionBtns}>
+                                <button className={`${styles.iconBtn} ${styles.iconBtnStock}`} onClick={() => openStockModal(item)} title="Update stok">
+                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+                                  </svg>
+                                </button>
+                                <button className={styles.iconBtn} onClick={() => openEditModal(item)} title="Edit">
+                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                                  </svg>
+                                </button>
+                                <button className={`${styles.iconBtn} ${styles.iconBtnDanger}`} onClick={() => handleDelete(item)} title="Hapus">
+                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                                  </svg>
+                                </button>
+                              </div>
+                            </td>
+                          )}
                         </tr>
                       );
                     })}
@@ -443,20 +443,22 @@ export default function InventarisPage() {
                           <small>{item.satuan}</small>
                         </div>
                       </div>
-                      <div className={styles.mobileCardActions}>
-                        <button className={`${styles.mobileActionBtn} ${styles.mobileActionStock}`} onClick={() => openStockModal(item)}>
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
-                          Stok
-                        </button>
-                        <button className={styles.mobileActionBtn} onClick={() => openEditModal(item)}>
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
-                          Edit
-                        </button>
-                        <button className={`${styles.mobileActionBtn} ${styles.mobileActionDanger}`} onClick={() => handleDelete(item)}>
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
-                          Hapus
-                        </button>
-                      </div>
+                      {!isReadOnly && (
+                        <div className={styles.mobileCardActions}>
+                          <button className={`${styles.mobileActionBtn} ${styles.mobileActionStock}`} onClick={() => openStockModal(item)}>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+                            Stok
+                          </button>
+                          <button className={styles.mobileActionBtn} onClick={() => openEditModal(item)}>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
+                            Edit
+                          </button>
+                          <button className={`${styles.mobileActionBtn} ${styles.mobileActionDanger}`} onClick={() => handleDelete(item)}>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
+                            Hapus
+                          </button>
+                        </div>
+                      )}
                     </div>
                   );
                 })}

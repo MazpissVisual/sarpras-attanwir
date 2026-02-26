@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useContext } from 'react';
 import Header from '@/components/Header';
 import { useToast } from '@/components/Toast';
+import { AuthContext } from '@/components/AuthProvider';
 import { supabase } from '@/lib/supabase';
 import { exportTransactionsToExcel } from '@/lib/exportExcel';
 import styles from './page.module.css';
@@ -16,6 +17,7 @@ const formatRupiah = (num) =>
   new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(num || 0);
 
 export default function LaporanPage() {
+  const { userProfile } = useContext(AuthContext);
   const { addToast } = useToast();
   const now = new Date();
 
@@ -24,6 +26,7 @@ export default function LaporanPage() {
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
+  const isReadOnly = !['superadmin', 'admin', 'staff'].includes(userProfile?.role);
 
   // Summary
   const [summary, setSummary] = useState({ total: 0, cash: 0, transfer: 0, utang: 0, count: 0 });

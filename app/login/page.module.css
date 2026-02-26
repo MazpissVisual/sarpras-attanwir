@@ -115,6 +115,26 @@
   transform: none;
 }
 
+.successBtn {
+  background: #10b981 !important;
+  color: #ffffff !important;
+  cursor: default !important;
+  opacity: 1 !important;
+  transform: scale(1.02) !important;
+}
+
+.transitionText {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.4s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 .spinner {
   width: 20px;
   height: 20px;

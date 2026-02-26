@@ -1,12 +1,14 @@
 'use client';
 
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useContext } from 'react';
 import { useRouter } from 'next/navigation';
 import Header from '@/components/Header';
 import { useToast } from '@/components/Toast';
+import { AuthContext } from '@/components/AuthProvider';
 // CameraCapture removed in favor of native camera input
 import { supabase } from '@/lib/supabase';
 import { compressImage } from '@/lib/imageCompression';
+import { addStockFromPurchase } from '@/lib/stockService';
 import styles from './page.module.css';
 
 const KATEGORI_OPTIONS = [
@@ -40,7 +42,10 @@ export default function BelanjaBaru() {
   const { addToast } = useToast();
   const fileInputRef = useRef(null);
   const nativeCameraRef = useRef(null);
-  const [cameraOpen, setCameraOpen] = useState(false); // We can still use this state to show/hide the UI if needed, but for native we'll trigger the ref
+  const [cameraOpen, setCameraOpen] = useState(false);
+  const { userProfile } = useContext(AuthContext);
+  const isReadOnly = !['superadmin', 'admin', 'staff'].includes(userProfile?.role);
+  const hasBelanjaAccess = userProfile?.role === 'superadmin' || userProfile?.role === 'admin' || (userProfile?.access_rights || []).includes('Belanja');
 
   // ===== Form Header =====
   const [header, setHeader] = useState({
@@ -265,60 +270,20 @@ export default function BelanjaBaru() {
 
       if (itemError) throw new Error(itemError.message);
 
-      // 4. Auto-update inventory stock
+      // 4. Auto-update inventory stock via Stock Service
       if (header.metode_bayar !== 'utang') {
-        // Only update inventory for completed purchases (cash/transfer)
         for (const item of items) {
-          const namaBarang = item.nama_barang.trim();
-          const jumlah = parseInt(item.jumlah) || 1;
+          const result = await addStockFromPurchase({
+            namaBarang: item.nama_barang.trim(),
+            jumlah: parseInt(item.jumlah) || 1,
+            satuan: item.satuan,
+            kategori: header.kategori,
+            transactionId: txData.id,
+            judulBelanja: header.judul.trim(),
+          });
 
-          // Check if item exists in inventory
-          const { data: existing } = await supabase
-            .from('inventory')
-            .select('id, stok_saat_ini')
-            .eq('nama_barang', namaBarang)
-            .maybeSingle();
-
-          if (existing) {
-            // Update existing inventory item
-            const newStock = existing.stok_saat_ini + jumlah;
-            await supabase
-              .from('inventory')
-              .update({ stok_saat_ini: newStock })
-              .eq('id', existing.id);
-
-            // Log the stock change
-            await supabase.from('inventory_stock_log').insert([{
-              inventory_id: existing.id,
-              perubahan: jumlah,
-              stok_sebelum: existing.stok_saat_ini,
-              stok_sesudah: newStock,
-              keterangan: `Belanja: ${header.judul.trim()}`,
-              transaction_id: txData.id,
-            }]);
-          } else {
-            // Create new inventory item
-            const { data: newItem } = await supabase
-              .from('inventory')
-              .insert([{
-                nama_barang: namaBarang,
-                kategori: header.kategori,
-                stok_saat_ini: jumlah,
-                satuan: item.satuan,
-              }])
-              .select()
-              .single();
-
-            if (newItem) {
-              await supabase.from('inventory_stock_log').insert([{
-                inventory_id: newItem.id,
-                perubahan: jumlah,
-                stok_sebelum: 0,
-                stok_sesudah: jumlah,
-                keterangan: `Belanja baru: ${header.judul.trim()}`,
-                transaction_id: txData.id,
-              }]);
-            }
+          if (!result.success) {
+            console.warn(`[Belanja] Gagal update stok "${item.nama_barang}": ${result.error}`);
           }
         }
       }
@@ -352,7 +317,25 @@ export default function BelanjaBaru() {
         subtitle="Catat transaksi pembelian sarpras"
       />
       <div className="pageContent">
-        <div className={styles.formWrapper}>
+        {!hasBelanjaAccess ? (
+          <div className="card" style={{ textAlign: 'center', padding: '60px 20px', color: '#64748b' }}>
+            <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ margin: '0 auto 16px' }}>
+               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+            </svg>
+            <h3 style={{ color: '#1e293b', marginBottom: '8px' }}>Akses Dilarang</h3>
+            <p>Akun Anda tidak memiliki hak akses untuk membuka modul Belanja ini.</p>
+          </div>
+        ) : isReadOnly ? (
+          <div className="card" style={{ textAlign: 'center', padding: '60px 20px', color: '#64748b' }}>
+            <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ margin: '0 auto 16px' }}>
+               <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+               <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+            <h3 style={{ color: '#1e293b', marginBottom: '8px' }}>Akses Ditolak</h3>
+            <p>Akun Anda dibatasi hanya untuk melihat data. Anda tidak memiliki izin untuk menambah data belanja baru.</p>
+          </div>
+        ) : (
+          <div className={styles.formWrapper}>
 
           {/* ===== SECTION: Form Header ===== */}
           <div className={styles.section}>
@@ -720,6 +703,7 @@ export default function BelanjaBaru() {
           </div>
 
         </div>
+        )}
       </div>
 
       {/* Hidden Native Interaction Inputs */}

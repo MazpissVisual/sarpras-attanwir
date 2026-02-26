@@ -1,10 +1,12 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo, useContext } from 'react';
 import Header from '@/components/Header';
 import { useToast } from '@/components/Toast';
+import { AuthContext } from '@/components/AuthProvider';
 import { supabase } from '@/lib/supabase';
 import { compressImage } from '@/lib/imageCompression';
+import { reduceStockFromDamage } from '@/lib/stockService';
 import Lightbox from '@/components/Lightbox';
 import styles from './page.module.css';
 
@@ -74,6 +76,7 @@ function StatusDropdown({ currentStatus, onChangeStatus, disabled }) {
 }
 
 export default function KerusakanPage() {
+  const { userProfile } = useContext(AuthContext);
   const { addToast } = useToast();
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -92,6 +95,14 @@ export default function KerusakanPage() {
   const fileInputRef = useRef(null);
   const nativeCameraRef = useRef(null);
   const [lightbox, setLightbox] = useState({ isOpen: false, images: [], index: 0 });
+
+  // Stock reduction modal (saat status = selesai)
+  const [stockModal, setStockModal] = useState(false);
+  const [stockReport, setStockReport] = useState(null);
+  const [inventoryItems, setInventoryItems] = useState([]);
+  const [selectedProduct, setSelectedProduct] = useState('');
+  const [damageQty, setDamageQty] = useState(1);
+  const [reducingStock, setReducingStock] = useState(false);
 
   const fetchReports = useCallback(async () => {
     try {
@@ -180,6 +191,26 @@ export default function KerusakanPage() {
   };
 
   const handleStatusChange = async (id, s) => {
+    // Jika status berubah ke 'selesai', tampilkan modal untuk kurangi stok
+    if (s === 'selesai') {
+      const report = reports.find(r => r.id === id);
+      setStockReport(report);
+      // Fetch inventory items for selection
+      const { data: invItems } = await supabase
+        .from('inventory')
+        .select('id, nama_barang, stok_saat_ini, satuan')
+        .order('nama_barang');
+      setInventoryItems(invItems || []);
+      // Coba match otomatis berdasarkan nama barang
+      const matched = (invItems || []).find(
+        i => i.nama_barang.toLowerCase() === report?.nama_barang?.toLowerCase()
+      );
+      setSelectedProduct(matched?.id || '');
+      setDamageQty(1);
+      setStockModal(true);
+      return;
+    }
+
     setUpdatingId(id);
     const { error } = await supabase.from('damage_reports').update({ status: s }).eq('id', id);
     if (!error) {
@@ -189,6 +220,47 @@ export default function KerusakanPage() {
     setUpdatingId(null);
   };
 
+  // Handle konfirmasi selesai (dengan atau tanpa kurangi stok)
+  const handleConfirmComplete = async (reduceStock) => {
+    if (!stockReport) return;
+    setReducingStock(true);
+    try {
+      // 1. Update status ke selesai
+      const { error } = await supabase
+        .from('damage_reports')
+        .update({ status: 'selesai' })
+        .eq('id', stockReport.id);
+      if (error) throw error;
+
+      setReports(prev => prev.map(r => r.id === stockReport.id ? { ...r, status: 'selesai' } : r));
+
+      // 2. Kurangi stok jika diminta
+      if (reduceStock && selectedProduct) {
+        const result = await reduceStockFromDamage({
+          productId: selectedProduct,
+          quantity: damageQty,
+          damageReportId: stockReport.id,
+          notes: `Kerusakan: ${stockReport.nama_barang} - ${stockReport.deskripsi || ''}`.trim(),
+        });
+
+        if (result.success) {
+          addToast(`Status selesai & stok dikurangi ${damageQty}`, 'success');
+        } else {
+          addToast(`Status diupdate tapi gagal kurangi stok: ${result.error}`, 'warning');
+        }
+      } else {
+        addToast('Status diperbarui ke selesai', 'success');
+      }
+
+      setStockModal(false);
+      setStockReport(null);
+    } catch (err) {
+      addToast('Gagal: ' + err.message, 'error');
+    } finally {
+      setReducingStock(false);
+    }
+  };
+
   const handleDelete = async (id) => {
     if (!confirm('Hapus laporan?')) return;
     const { error } = await supabase.from('damage_reports').delete().eq('id', id);
@@ -196,6 +268,8 @@ export default function KerusakanPage() {
   };
 
   const formatDate = (d) => new Date(d).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+
+  const isReadOnly = !['superadmin', 'admin', 'staff'].includes(userProfile?.role);
 
   return (
     <>
@@ -218,9 +292,11 @@ export default function KerusakanPage() {
               <input type="text" placeholder="Cari..." value={search} onChange={e => setSearch(e.target.value)} />
             </div>
           </div>
-          <button className="btn btnPrimary" onClick={() => { setModalMode('create'); setFotos([]); setFormData({nama_pelapor:'', nama_barang:'', deskripsi:''}); setModalOpen(true); }}>
-            + Lapor Kerusakan
-          </button>
+          {!isReadOnly && (
+            <button className="btn btnPrimary" onClick={() => { setModalMode('create'); setFotos([]); setFormData({nama_pelapor:'', nama_barang:'', deskripsi:''}); setModalOpen(true); }}>
+              + Lapor Kerusakan
+            </button>
+          )}
         </div>
 
         {/* --- Grid wrapper like Dashboard's tablesGrid --- */}
@@ -240,7 +316,7 @@ export default function KerusakanPage() {
                     <th>Deskripsi</th>
                     <th className={styles.thCenter}>Foto</th>
                     <th>Status</th>
-                    <th className={styles.thCenter}>Aksi</th>
+                    {!isReadOnly && <th className={styles.thCenter}>Aksi</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -268,14 +344,16 @@ export default function KerusakanPage() {
                           ) : <span className={styles.noPhoto}>—</span>}
                         </td>
                         <td>
-                          <StatusDropdown currentStatus={r.status} onChangeStatus={s => handleStatusChange(r.id, s)} disabled={updatingId === r.id} />
+                          <StatusDropdown currentStatus={r.status} onChangeStatus={s => handleStatusChange(r.id, s)} disabled={isReadOnly || updatingId === r.id} />
                         </td>
-                        <td className={styles.tdCenter}>
-                          <div className={styles.actionBtns}>
-                            <button className={styles.iconBtn} onClick={() => { setModalMode('edit'); setEditingReport(r); setFormData({nama_pelapor:r.nama_pelapor, nama_barang:r.nama_barang, deskripsi:r.deskripsi||''}); setFotos(photos.map(url=>({url, preview:url, isNew:false}))); setModalOpen(true); }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg></button>
-                            <button className={`${styles.iconBtn} ${styles.iconBtnDanger}`} onClick={() => handleDelete(r.id)}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg></button>
-                          </div>
-                        </td>
+                        {!isReadOnly && (
+                          <td className={styles.tdCenter}>
+                            <div className={styles.actionBtns}>
+                              <button className={styles.iconBtn} onClick={() => { setModalMode('edit'); setEditingReport(r); setFormData({nama_pelapor:r.nama_pelapor, nama_barang:r.nama_barang, deskripsi:r.deskripsi||''}); setFotos(photos.map(url=>({url, preview:url, isNew:false}))); setModalOpen(true); }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg></button>
+                              <button className={`${styles.iconBtn} ${styles.iconBtnDanger}`} onClick={() => handleDelete(r.id)}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg></button>
+                            </div>
+                          </td>
+                        )}
                       </tr>
                     );
                   })}
@@ -343,6 +421,54 @@ export default function KerusakanPage() {
       <Lightbox isOpen={lightbox.isOpen} images={lightbox.images} initialIndex={lightbox.index} onClose={() => setLightbox({...lightbox, isOpen:false})} />
       <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handleAddPhotos} hidden />
       <input ref={nativeCameraRef} type="file" accept="image/*" capture="environment" onChange={handleAddPhotos} hidden />
+
+      {/* Modal: Konfirmasi Selesai + Kurangi Stok */}
+      {stockModal && stockReport && (
+        <div className={styles.modalOverlay} onClick={() => { setStockModal(false); setStockReport(null); }}>
+          <div className={styles.modal} onClick={e => e.stopPropagation()} style={{ maxWidth: '460px' }}>
+            <div className={styles.modalHeader}>
+              <h2 style={{ fontSize:'16px', fontWeight:700 }}>Konfirmasi Selesai</h2>
+              <button className={styles.modalClose} onClick={() => { setStockModal(false); setStockReport(null); }}>×</button>
+            </div>
+            <div style={{ padding: '20px 24px' }}>
+              <div style={{ background: 'var(--color-border-light)', borderRadius: 'var(--radius-md)', padding: '14px 16px', marginBottom: '20px' }}>
+                <div style={{ fontWeight: 700, fontSize: '14px', marginBottom: '4px' }}>{stockReport.nama_barang}</div>
+                <div style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>Dilaporkan oleh {stockReport.nama_pelapor}</div>
+              </div>
+
+              <div style={{ fontSize: '14px', marginBottom: '16px', color: 'var(--color-text-secondary)' }}>
+                Apakah kerusakan ini mengakibatkan pengurangan stok inventaris?
+              </div>
+
+              <div className="formGroup">
+                <label className="formLabel">Pilih Barang di Inventaris</label>
+                <select className="formSelect" value={selectedProduct} onChange={e => setSelectedProduct(e.target.value)}>
+                  <option value="">— Pilih barang —</option>
+                  {inventoryItems.map(i => (
+                    <option key={i.id} value={i.id}>{i.nama_barang} (stok: {i.stok_saat_ini} {i.satuan})</option>
+                  ))}
+                </select>
+              </div>
+
+              {selectedProduct && (
+                <div className="formGroup">
+                  <label className="formLabel">Jumlah yang rusak</label>
+                  <input type="number" className="formInput" min="1" value={damageQty} onChange={e => setDamageQty(parseInt(e.target.value) || 1)} />
+                </div>
+              )}
+
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', paddingTop: '12px' }}>
+                <button className="btn btnSecondary" onClick={() => handleConfirmComplete(false)} disabled={reducingStock}>
+                  Selesai Tanpa Kurangi Stok
+                </button>
+                <button className="btn btnDanger" onClick={() => handleConfirmComplete(true)} disabled={!selectedProduct || reducingStock}>
+                  {reducingStock ? 'Memproses...' : `Selesai & Kurangi Stok`}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
