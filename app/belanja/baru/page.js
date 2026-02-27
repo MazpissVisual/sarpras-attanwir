@@ -22,9 +22,8 @@ const KATEGORI_OPTIONS = [
 ];
 
 const METODE_OPTIONS = [
-  { value: 'cash', label: 'Cash' },
-  { value: 'transfer', label: 'Transfer' },
-  { value: 'utang', label: 'Utang' },
+  { value: 'cash', label: 'Tunai / Cash' },
+  { value: 'transfer', label: 'Transfer Bank' },
 ];
 
 const SATUAN_OPTIONS = ['pcs', 'dus', 'lusin', 'rim', 'meter', 'kg', 'liter', 'set', 'unit', 'roll', 'lembar', 'buah'];
@@ -57,6 +56,11 @@ export default function BelanjaBaru() {
     kategori: 'lainnya',
   });
 
+  // ===== Payment Option State =====
+  const [paymentOption, setPaymentOption] = useState('lunas'); // utang | dp | lunas
+  const [dpType, setDpType] = useState('nominal'); // nominal | persen
+  const [dpInput, setDpInput] = useState('');
+
   // ===== Dynamic Item Rows =====
   const [items, setItems] = useState([emptyItem()]);
 
@@ -79,6 +83,14 @@ export default function BelanjaBaru() {
   const grandTotal = useMemo(() => {
     return itemTotals.reduce((sum, t) => sum + t, 0);
   }, [itemTotals]);
+
+  // ===== DP Calculation =====
+  const dpNominal = useMemo(() => {
+    if (paymentOption === 'utang') return 0;
+    if (paymentOption === 'lunas') return grandTotal;
+    if (dpType === 'persen') return (grandTotal * (Number(dpInput) / 100)) || 0;
+    return Number(dpInput) || 0;
+  }, [paymentOption, dpType, dpInput, grandTotal]);
 
   // ===== Header Change Handler =====
   const updateHeader = (field, value) => {
@@ -219,6 +231,18 @@ export default function BelanjaBaru() {
   const handleSave = async () => {
     if (!validate()) return;
 
+    // Validasi nominal DP
+    if (paymentOption === 'dp') {
+      if (!dpInput || dpNominal <= 0) {
+        addToast('Nominal DP harus diisi dan lebih dari 0', 'error');
+        return;
+      }
+      if (dpNominal > grandTotal) {
+        addToast('Nominal DP tidak boleh melebihi total belanja', 'error');
+        return;
+      }
+    }
+
     setSaving(true);
     try {
       // 1. Upload files if exist
@@ -226,6 +250,10 @@ export default function BelanjaBaru() {
       if (fotos.length > 0) {
         fotoUrls = await uploadPhotos();
       }
+
+      // Tentukan status_lunas dan metode dari paymentOption
+      const isLunas = paymentOption === 'lunas';
+      const metode = paymentOption === 'utang' ? 'utang' : header.metode_bayar;
 
       // 2. Insert transaction header
       const { data: txData, error: txError } = await supabase
@@ -236,10 +264,10 @@ export default function BelanjaBaru() {
           tanggal: header.tanggal,
           kategori: header.kategori,
           total_bayar: grandTotal,
-          metode_bayar: header.metode_bayar,
+          metode_bayar: metode,
           foto_nota_url: fotoUrls.length > 0 ? fotoUrls[0] : null,
           foto_urls: fotoUrls,
-          status_lunas: header.metode_bayar !== 'utang',
+          status_lunas: isLunas,
         }])
         .select()
         .single();
@@ -262,7 +290,7 @@ export default function BelanjaBaru() {
       if (itemError) throw new Error(itemError.message);
 
       // 4. Auto-update inventory stock via Stock Service
-      if (header.metode_bayar !== 'utang') {
+      if (paymentOption !== 'utang') {
         for (const item of items) {
           const result = await addStockFromPurchase({
             namaBarang: item.nama_barang.trim(),
@@ -290,6 +318,9 @@ export default function BelanjaBaru() {
         metode_bayar: 'cash',
         kategori: 'lainnya',
       });
+      setPaymentOption('lunas');
+      setDpType('nominal');
+      setDpInput('');
       setItems([emptyItem()]);
       setFotos([]);
 
@@ -373,19 +404,6 @@ export default function BelanjaBaru() {
                   value={header.tanggal}
                   onChange={(e) => updateHeader('tanggal', e.target.value)}
                 />
-              </div>
-
-              <div className="formGroup">
-                <label className="formLabel">Metode Bayar</label>
-                <select
-                  className="formSelect"
-                  value={header.metode_bayar}
-                  onChange={(e) => updateHeader('metode_bayar', e.target.value)}
-                >
-                  {METODE_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
-                  ))}
-                </select>
               </div>
 
               <div className="formGroup">
@@ -595,6 +613,112 @@ export default function BelanjaBaru() {
               </div>
               <div className={styles.grandTotalValue}>{formatRupiah(grandTotal)}</div>
             </div>
+          </div>
+
+          {/* ===== SECTION: Pembayaran Awal ===== */}
+          <div className={styles.section}>
+            <div className={styles.sectionHeader}>
+              <div className={styles.sectionIcon}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="1" y="4" width="22" height="16" rx="2" ry="2" />
+                  <line x1="1" y1="10" x2="23" y2="10" />
+                </svg>
+              </div>
+              <h2>Pembayaran Awal</h2>
+            </div>
+            <p style={{ fontSize: 13, color: 'var(--color-text-secondary)', marginBottom: 16, marginTop: -8 }}>
+              Pilih status pembayaran saat transaksi ini dibuat.
+            </p>
+
+            {/* Radio Cards */}
+            <div className={styles.paymentRadioGroup}>
+              {[
+                {
+                  value: 'utang',
+                  icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="#dc2626" stroke="none"><circle cx="12" cy="12" r="8"/></svg>,
+                  label: 'Belum Bayar / Utang',
+                  desc: 'Belum ada pembayaran sama sekali',
+                },
+                {
+                  value: 'dp',
+                  icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="#f59e0b" stroke="none"><circle cx="12" cy="12" r="8"/></svg>,
+                  label: 'DP / Cicilan Pertama',
+                  desc: 'Bayar sebagian di awal',
+                },
+                {
+                  value: 'lunas',
+                  icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="#16a34a" stroke="none"><circle cx="12" cy="12" r="8"/></svg>,
+                  label: 'Lunas',
+                  desc: 'Bayar penuh sekarang',
+                },
+              ].map((opt) => (
+                <label
+                  key={opt.value}
+                  className={`${styles.paymentRadioCard} ${paymentOption === opt.value ? styles.paymentRadioCardActive : ''}`}
+                >
+                  <input
+                    type="radio"
+                    name="payment_option"
+                    value={opt.value}
+                    checked={paymentOption === opt.value}
+                    onChange={(e) => { setPaymentOption(e.target.value); setDpInput(''); }}
+                    style={{ display: 'none' }}
+                  />
+                  <span className={styles.paymentRadioEmoji}>{opt.icon}</span>
+                  <span className={styles.paymentRadioLabel}>{opt.label}</span>
+                  <span className={styles.paymentRadioDesc}>{opt.desc}</span>
+                </label>
+              ))}
+            </div>
+
+            {/* DP sub-options */}
+            {paymentOption === 'dp' && (
+              <div className={styles.dpBox}>
+                <div className={styles.dpGrid}>
+                  <div className="formGroup">
+                    <label className="formLabel">Tipe DP</label>
+                    <select className="formSelect" value={dpType} onChange={(e) => { setDpType(e.target.value); setDpInput(''); }}>
+                      <option value="nominal">Nominal (Rp)</option>
+                      <option value="persen">Persentase (%)</option>
+                    </select>
+                  </div>
+                  <div className="formGroup">
+                    <label className="formLabel">{dpType === 'persen' ? 'Persentase DP (%)' : 'Nominal DP (Rp)'}</label>
+                    <input
+                      type="number"
+                      className="formInput"
+                      placeholder={dpType === 'persen' ? 'Cth: 30' : 'Cth: 150000'}
+                      min="0"
+                      max={dpType === 'persen' ? 100 : grandTotal}
+                      value={dpInput}
+                      onChange={(e) => setDpInput(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div className={styles.dpPreview}>
+                  <span>DP yang akan dibayar:</span>
+                  <strong style={{ color: 'var(--color-success)', fontSize: 20 }}>
+                    {formatRupiah(dpNominal)}
+                  </strong>
+                </div>
+              </div>
+            )}
+
+            {/* Metode bayar (hanya muncul jika bukan utang) */}
+            {paymentOption !== 'utang' && (
+              <div className="formGroup" style={{ marginTop: 12, maxWidth: 280 }}>
+                <label className="formLabel">Metode Pembayaran</label>
+                <select
+                  className="formSelect"
+                  value={header.metode_bayar}
+                  onChange={(e) => updateHeader('metode_bayar', e.target.value)}
+                >
+                  {METODE_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
 
           {/* ===== SECTION: Upload Bukti ===== */}

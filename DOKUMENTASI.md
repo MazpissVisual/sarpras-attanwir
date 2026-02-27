@@ -1,450 +1,458 @@
-# 📋 Dokumentasi Sarpras Digital Attanwir
+# 📋 Dokumentasi Sarpras Digital Attanwir — Versi 1
 
-> Sistem Manajemen Sarana & Prasarana Digital — Pondok Pesantren Attanwir
-
----
-
-## 📖 Deskripsi Aplikasi
-
-**Sarpras Digital Attanwir** adalah aplikasi web untuk mengelola sarana dan prasarana di lingkungan Pondok Pesantren Attanwir. Aplikasi ini membantu tim Sarpras dalam:
-
-- **Mencatat setiap pengeluaran belanja** secara digital (menggantikan pencatatan manual)
-- **Mengelola inventaris barang** pesantren (stok, lokasi, kategori)
-- **Melaporkan dan melacak kerusakan** fasilitas pesantren
-- **Menghasilkan laporan keuangan** bulanan dalam format Excel
-- **Memantau ringkasan data** melalui dashboard real-time
-
-Aplikasi ini dibangun menggunakan **Next.js** (React) sebagai frontend dan **Supabase** (PostgreSQL) sebagai backend/database, serta mendukung instalasi sebagai **PWA** (Progressive Web App) di perangkat mobile.
+> Sistem Manajemen Sarana & Prasarana berbasis web untuk Pondok Pesantren Attanwir.
+> Dibangun dengan **Next.js 15 (App Router)** + **Supabase** (PostgreSQL + Storage + Auth).
 
 ---
 
-## 🏗️ Teknologi Yang Digunakan
+## 📌 Daftar Isi
 
-| Teknologi | Fungsi |
-|-----------|--------|
-| **Next.js 15** | Framework React untuk server-side rendering & routing |
-| **React 19** | Library UI untuk membangun komponen interaktif |
-| **Supabase** | Backend-as-a-Service (Database PostgreSQL + Storage + Auth) |
-| **CSS Modules** | Styling per-komponen, tanpa konflik class name |
-| **XLSX** | Library untuk export data ke format Excel (.xlsx) |
-| **browser-image-compression** | Kompresi gambar di sisi klien sebelum upload |
-| **PWA (manifest.json)** | Memungkinkan aplikasi di-install ke Home Screen HP |
+1. [Gambaran Umum](#gambaran-umum)
+2. [Teknologi yang Digunakan](#teknologi-yang-digunakan)
+3. [Struktur Halaman](#struktur-halaman)
+4. [Fitur Lengkap](#fitur-lengkap)
+5. [Sistem Role & Hak Akses](#sistem-role--hak-akses)
+6. [Panduan Penggunaan](#panduan-penggunaan)
+7. [Struktur Database](#struktur-database)
+8. [Konfigurasi & Environment](#konfigurasi--environment)
 
 ---
 
-## 📂 Struktur Folder Utama
+## Gambaran Umum
+
+**Sarpras Digital Attanwir** adalah aplikasi manajemen internal yang dirancang untuk:
+
+- Mencatat dan memantau **stok barang** sarana & prasarana pesantren
+- Mengelola **transaksi belanja** (pembelian barang) lengkap dengan riwayat pembayaran
+- Mencatat **barang keluar** dan memperbarui stok secara otomatis
+- Melaporkan **kerusakan barang** dengan alur status perbaikan
+- Menyediakan **laporan belanja** yang dapat difilter dan diekspor
+- Mengontrol **hak akses** tiap pengguna sesuai peran masing-masing
+
+---
+
+## Teknologi yang Digunakan
+
+| Layer | Teknologi |
+|---|---|
+| Frontend | Next.js 15 (App Router), React 19 |
+| Styling | Vanilla CSS (CSS Modules + globals.css) |
+| Backend / DB | Supabase (PostgreSQL) |
+| Auth | Supabase Auth (email + password) |
+| Storage | Supabase Storage (upload foto nota) |
+| Hosting | (Bisa di-deploy ke Vercel) |
+
+---
+
+## Struktur Halaman
 
 ```
-sarpras-attanwir/
-├── app/                          # Halaman-halaman aplikasi (Next.js App Router)
-│   ├── page.js                   # Dashboard utama
-│   ├── page.module.css           # Style dashboard
-│   ├── layout.js                 # Root layout (sidebar, toast, meta PWA)
-│   ├── globals.css               # Design tokens & utility classes global
-│   ├── belanja/
-│   │   └── baru/
-│   │       ├── page.js           # Form pendataan belanja baru
-│   │       └── page.module.css
-│   ├── inventaris/
-│   │   ├── page.js               # Halaman inventaris barang
-│   │   └── page.module.css
-│   ├── kerusakan/
-│   │   ├── page.js               # Halaman laporan kerusakan
-│   │   └── page.module.css
-│   └── laporan/
-│       ├── page.js               # Halaman laporan & export Excel
-│       └── page.module.css
-├── components/                   # Komponen reusable
-│   ├── Header.js                 # Header halaman
-│   ├── Sidebar.js                # Sidebar navigasi
-│   ├── StatCard.js               # Kartu statistik dashboard
-│   └── Toast.js + Toast.module.css  # Sistem notifikasi global
-├── lib/                          # Utility & helper
-│   ├── supabase.js               # Supabase client
-│   ├── exportExcel.js            # Fungsi export Excel
-│   └── imageCompression.js       # Fungsi kompresi gambar
-├── public/
-│   ├── manifest.json             # Konfigurasi PWA
-│   └── icons/                    # Ikon PWA
-├── sql/                          # SQL scripts untuk database
-│   ├── create_tables.sql         # Skema lengkap semua tabel
-│   ├── migration_belanja.sql     # Migration kolom tambahan belanja
-│   ├── migration_inventory.sql   # Migration tabel inventaris
-│   └── seed_dummy_data.sql       # 60 data dummy untuk testing
-└── .env.local                    # Environment variables (Supabase keys)
+/                       → Dashboard
+/login                  → Halaman Login
+/belanja/baru           → Form Pendataan Belanja Baru
+/laporan                → Laporan Belanja (tabel semua transaksi)
+/laporan/[id]           → Detail Transaksi Belanja
+/inventaris             → Inventaris Barang
+/barang-keluar          → Form Barang Keluar
+/riwayat-stok           → Riwayat Perubahan Stok
+/kerusakan              → Laporan Kerusakan Barang
+/pengaturan-user        → (Super Admin only) Manajemen User
+/unauthorized           → Halaman akses ditolak
 ```
 
 ---
 
-## 🔧 Cara Setup & Menjalankan
+## Fitur Lengkap
 
-### Prasyarat
-- Node.js 18+ terinstall
-- Akun Supabase (gratis di [supabase.com](https://supabase.com))
+### 🏠 1. Dashboard (`/`)
 
-### Langkah Setup
+Halaman utama setelah login, menampilkan ringkasan data real-time:
+
+**Stat Cards:**
+| Kartu | Isi |
+|---|---|
+| Pengeluaran Bulan Ini | Total belanja metode Cash + Transfer bulan berjalan |
+| Utang Belum Lunas | Akumulasi nilai transaksi yang belum `status_lunas` |
+| Kerusakan Aktif | Jumlah laporan kerusakan berstatus "dilaporkan" atau "diproses" |
+| Transaksi Bulan Ini | Jumlah transaksi yang dibuat bulan ini |
+
+**Fitur tambahan:**
+- ⚠️ **Alert stok rendah** — banner otomatis muncul jika ada barang dengan stok < 5
+- Tabel **5 Transaksi Terbaru** (judul, toko, total, metode, tanggal)
+- Tabel **5 Laporan Kerusakan Terbaru**
+- Tombol **Refresh Data** untuk memperbarui semua stat
+
+---
+
+### 🛒 2. Pendataan Belanja (`/belanja/baru`)
+
+Form input transaksi pembelian barang baru.
+
+**Field yang diisi:**
+| Field | Keterangan |
+|---|---|
+| Judul Belanja | Nama/deskripsi transaksi |
+| Toko / Vendor | Nama toko atau supplier |
+| Tanggal | Tanggal transaksi |
+| Kategori | Listrik / Bangunan / ATK / Kebersihan / Elektronik / Furniture / Lainnya |
+| Rincian Barang | Tabel: nama barang, qty, satuan, harga satuan → subtotal otomatis |
+| Status Pembayaran | **Belum Bayar/Utang** / **DP/Cicilan** / **Lunas** |
+| Metode Pembayaran | Tunai / Transfer |
+| Nominal Bayar Awal | (Muncul jika DP/Cicilan dipilih) |
+| Foto Nota | Upload foto bukti belanja (opsional, maks 5MB) |
+
+**Logika status:**
+- **Utang** → `status_lunas = false`, metode = "utang", tidak ada pembayaran dicatat
+- **DP** → `status_lunas = false`, ada pembayaran pertama di `pembayaran_transaksi`
+- **Lunas** → `status_lunas = true`, total_dibayar = total_bayar
+
+**Setelah simpan:**
+- Data masuk ke tabel `transactions` + `transaction_items`
+- Jika ada pembayaran awal (DP/Lunas), masuk ke `pembayaran_transaksi`
+- Stok barang **tidak otomatis dikurangi** dari form ini (belanja = pembelian masuk, bukan keluar)
+
+---
+
+### 📊 3. Laporan Belanja (`/laporan`)
+
+Tabel semua transaksi belanja dengan fitur filtering dan export.
+
+**Filter yang tersedia:**
+- Bulan / Tahun
+- Status: Semua / Lunas / Belum Lunas
+- Metode: Semua / Cash / Transfer / Utang
+
+**Kolom tabel:**
+`No | Tanggal | Judul | Toko | Kategori | Metode | Total | Status`
+
+**Fitur:**
+- Klik baris → masuk ke halaman **Detail Transaksi** (`/laporan/[id]`)
+- Tombol **Export CSV** untuk download data
+- Summary cards: total transaksi, total pengeluaran, total utang
+
+---
+
+### 📄 4. Detail Transaksi (`/laporan/[id]`)
+
+Halaman detail lengkap satu transaksi belanja.
+
+**Section 1 — Informasi Utama:**
+- Judul, Toko, Tanggal, Metode Bayar Awal, Kategori
+- **Status badge** otomatis: 🔴 Utang / 🟡 DP / 🟢 Lunas
+- **3 kotak ringkasan**: Total Belanja | Sudah Dibayar | Sisa Tagihan
+- **Progress bar** visual persentase pembayaran
+
+**Section 2 — Detail Barang:**
+- Tabel: Nama Barang | Qty | Satuan | Harga | Subtotal
+- Grand Total di footer tabel
+
+**Section 3 — Riwayat Pembayaran:**
+- Daftar semua cicilan/pembayaran (tanggal, metode, jumlah, catatan)
+- Tombol **+ Tambah Bayar** (Admin only, tidak tampil jika sudah Lunas)
+- Admin bisa **hapus pembayaran** → trigger DB otomatis recalculate sisa
+
+**Modal Tambah Pembayaran:**
+- Nominal (maks = sisa tagihan, divalidasi server-side)
+- Tanggal, Metode (Tunai/Transfer), Catatan opsional
+
+**Section 4 — Lampiran Nota:**
+- Preview foto nota yang diupload saat input awal
+- Upload nota tambahan via **Pilih File** (galeri/PDF) atau **Kamera** (foto langsung)
+- Preview gambar sebelum upload
+- Admin bisa hapus nota
+
+---
+
+### 📦 5. Inventaris Barang (`/inventaris`)
+
+Kelola daftar dan stok semua barang sarana & prasarana.
+
+**Fitur:**
+- **Tambah barang baru** (nama, kategori, stok awal, satuan, lokasi penyimpanan)
+- **Edit info barang** (nama, kategori, satuan, lokasi)
+- **Update stok cepat** → modal ± stok dengan preview jumlah baru, dicatat ke `stock_log`
+- **Hapus barang** (dengan konfirmasi)
+- **Filter**: kategori, status stok (Aman / Rendah < 5)
+- **Cari**: nama barang, lokasi, atau kategori
+- Indikator visual stok: 🟢 Aman / 🟡 Rendah / 🔴 Habis
+
+**Kategori barang:**
+Listrik · Bangunan · ATK · Kebersihan · Elektronik · Furniture · Lainnya
+
+**Satuan tersedia:**
+pcs · box · sak · dus · rim · meter · kg · liter · set · unit · roll · lembar · buah
+
+---
+
+### 📤 6. Barang Keluar (`/barang-keluar`)
+
+Catat pengeluaran/pemakaian barang dari inventaris.
+
+**Field form:**
+| Field | Keterangan |
+|---|---|
+| Pilih Barang | Dropdown dari inventaris |
+| Jumlah Keluar | Tidak boleh melebihi stok tersedia |
+| Keperluan / Tujuan | Deskripsi penggunaan barang |
+| Penanggung Jawab | Nama orang yang mengambil |
+| Tanggal | Tanggal pemakaian |
+| Catatan | Opsional |
+
+**Setelah simpan:**
+- Stok di `inventory` **otomatis berkurang**
+- Tercatat di `barang_keluar` + `stock_log` (type: "out")
+
+---
+
+### 📈 7. Riwayat Stok (`/riwayat-stok`)
+
+Log semua perubahan stok inventaris.
+
+**Tipe perubahan yang tercatat:**
+| Tipe | Ikon | Keterangan |
+|---|---|---|
+| Masuk (in) | ↓ hijau | Penambahan stok (manual adjustment / pembelian) |
+| Keluar (out) | ↑ oranye | Barang keluar/pemakaian |
+| Penyesuaian | ⇄ biru | Koreksi manual stok dari halaman inventaris |
+| Kerusakan | ⚠ merah | Stok berkurang karena kerusakan |
+
+**Filter yang tersedia:**
+- Tipe perubahan
+- Barang tertentu (dropdown)
+- Rentang tanggal (dari–sampai)
+- Pencarian teks (nama barang/catatan)
+
+**Fitur tambahan:**
+- Pagination 25 per halaman
+- Klik tombol 🔍 → **modal detail barang** (info + timeline riwayat lengkap barang tersebut)
+- Tampilan responsif: tabel di desktop, card di mobile
+
+---
+
+### 🔧 8. Laporan Kerusakan (`/kerusakan`)
+
+Catat dan pantau status kerusakan barang.
+
+**Data yang dicatat:**
+- Nama barang yang rusak
+- Nama pelapor
+- Deskripsi kerusakan
+- Foto kerusakan (opsional)
+- Tanggal laporan
+
+**Status alur:**
+```
+Dilaporkan → Diproses → Selesai
+                      ↘ Ditolak
+```
+
+**Fitur admin:**
+- Update status laporan
+- Tambah catatan tindakan
+
+---
+
+### 👥 9. Manajemen User (`/pengaturan-user`) — Super Admin Only
+
+**Fitur:**
+- Lihat semua pengguna terdaftar (nama, email, role, hak akses)
+- **Tambah user** baru (email + password langsung dibuat di Supabase Auth)
+- **Edit user**: nama, email, password (opsional), role, hak akses
+- **Hapus user** (tidak bisa hapus diri sendiri atau sesama Super Admin)
+
+**Batasan keamanan:**
+- Hanya **Super Admin** yang bisa mengakses halaman ini
+- Pengguna lain diredirect ke halaman utama jika mencoba akses
+
+---
+
+## Sistem Role & Hak Akses
+
+### Role yang tersedia:
+| Role | Deskripsi |
+|---|---|
+| `superadmin` | Akses penuh ke semua fitur termasuk Manajemen User |
+| `admin` | Akses ke semua modul sarpras, bisa tambah/hapus/edit data |
+| `staff` | Akses terbatas sesuai `access_rights` yang dikonfigurasi |
+| `pimpinan` | Akses read-only (hanya lihat laporan) |
+| Custom | Role kustom bisa dibuat dengan nama bebas |
+
+### Hak Akses per Modul (Access Rights):
+Setiap user bisa dikonfigurasi aksesnya per modul:
+- `Inventaris` · `Belanja` · `Barang Keluar` · `Riwayat Stok` · `Kerusakan` · `Laporan`
+
+**Catatan:** Super Admin dan Admin otomatis memiliki akses ke semua modul tanpa perlu konfigurasi access rights manual.
+
+### Tabel akses fitur:
+| Fitur | Super Admin | Admin | Staff (dengan hak) | Pimpinan |
+|---|---|---|---|---|
+| Dashboard | ✅ | ✅ | ✅ | ✅ |
+| Pendataan Belanja | ✅ | ✅ | ✅* | ❌ |
+| Laporan (lihat) | ✅ | ✅ | ✅* | ✅ |
+| Tambah Pembayaran | ✅ | ✅ | ❌ | ❌ |
+| Inventaris (lihat) | ✅ | ✅ | ✅* | ✅ |
+| Inventaris (edit) | ✅ | ✅ | ✅* | ❌ |
+| Barang Keluar | ✅ | ✅ | ✅* | ❌ |
+| Riwayat Stok | ✅ | ✅ | ✅* | ❌ |
+| Kerusakan | ✅ | ✅ | ✅* | ❌ |
+| Manajemen User | ✅ | ❌ | ❌ | ❌ |
+
+> *Staff hanya bisa akses jika modul tersebut ada di `access_rights` mereka
+
+---
+
+## Panduan Penggunaan
+
+### 🔑 Login
+
+1. Buka aplikasi di browser
+2. Masuk dengan **email** dan **password** yang diberikan admin
+3. Sistem akan otomatis redirect ke Dashboard
+
+---
+
+### ➕ Mencatat Belanja Baru
+
+1. Klik **Pendataan Belanja** di sidebar
+2. Isi **Judul Belanja** dan **Toko/Vendor**
+3. Pilih **Tanggal** dan **Kategori**
+4. Di bagian **Rincian Barang**:
+   - Klik **+ Tambah Baris**
+   - Isi nama barang, qty, satuan, harga satuan
+   - Subtotal dihitung otomatis
+   - Ulangi untuk setiap barang
+5. Pilih **Status Pembayaran**:
+   - 🔴 **Utang** → belum ada pembayaran sama sekali
+   - 🟡 **DP** → isi nominal bayar awal
+   - 🟢 **Lunas** → bayar penuh saat transaksi
+6. Pilih **Metode Pembayaran** (Tunai/Transfer)
+7. Upload **Foto Nota** jika ada (opsional)
+8. Klik **Simpan Belanja**
+
+---
+
+### 💳 Menambah Cicilan/Pelunasan
+
+1. Buka **Laporan** → klik baris transaksi yang masih belum lunas
+2. Scroll ke section **Riwayat Pembayaran**
+3. Klik tombol **+ Tambah Bayar**
+4. Isi nominal (maksimal = sisa tagihan), tanggal, metode, catatan
+5. Klik **Konfirmasi Pembayaran**
+6. Status otomatis terupdate: DP → Lunas jika sisa tagihan = 0
+
+---
+
+### 📦 Mencatat Barang Keluar
+
+1. Klik **Barang Keluar** di sidebar
+2. Pilih barang dari dropdown
+3. Isi jumlah yang dikeluarkan (stok tersedia ditampilkan)
+4. Isi keperluan, penanggung jawab, tanggal
+5. Klik **Simpan** → stok inventaris otomatis berkurang
+
+---
+
+### 📋 Mengelola Inventaris
+
+**Tambah barang baru:**
+1. Klik **Inventaris Barang** → klik **Tambah Barang**
+2. Isi nama, kategori, satuan, stok awal, lokasi (opsional)
+3. Klik **Tambah Barang**
+
+**Update stok manual (penyesuaian):**
+1. Temukan barang → klik ikon **+** (update stok)
+2. Gunakan tombol **+/−** untuk tentukan perubahan
+3. Isi keterangan opsional
+4. Klik **Tambah/Kurangi**
+
+---
+
+### 👤 Manajemen User (Super Admin)
+
+**Tambah user baru:**
+1. Buka **Pengaturan User** di sidebar (hanya Super Admin)
+2. Klik **Add User**
+3. Isi: Nama Lengkap, Email, Password (min. 6 karakter)
+4. Pilih **Role** (Super Admin / Staff / Pimpinan / Custom)
+5. Centang **Access Rights** yang diizinkan
+6. Klik **Create User & Account**
+
+**Edit user:**
+1. Klik ikon ✏️ di baris user yang ingin diubah
+2. Ubah data yang diperlukan (password bisa dikosongkan jika tidak ingin diganti)
+3. Klik **Save Changes**
+
+**Hapus user:**
+1. Klik ikon 🗑️ di baris user
+2. Konfirmasi penghapusan
+> ⚠️ Tidak bisa menghapus akun sendiri atau sesama Super Admin
+
+---
+
+## Struktur Database
+
+### Tabel Utama
+
+| Tabel | Fungsi |
+|---|---|
+| `transactions` | Header transaksi belanja |
+| `transaction_items` | Detail barang per transaksi |
+| `pembayaran_transaksi` | Riwayat pembayaran/cicilan |
+| `nota_files` | File nota/bukti yang diupload |
+| `inventory` | Daftar barang dengan stok saat ini |
+| `stock_log` | Log semua perubahan stok |
+| `barang_keluar` | Record barang yang dikeluarkan |
+| `damage_reports` | Laporan kerusakan barang |
+| `user_profiles` | Profil pengguna + role + access_rights |
+
+### Trigger Database Otomatis
+
+| Trigger | Fungsi |
+|---|---|
+| `recalc_transaksi_pembayaran` | Saat pembayaran ditambah/hapus → update `total_dibayar`, `sisa_tagihan`, `status_lunas` di `transactions` |
+
+---
+
+## Konfigurasi & Environment
+
+File `.env.local` (tidak di-commit ke git):
+
+```env
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL=https://xxxx.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
+SUPABASE_SERVICE_ROLE_KEY=eyJ...
+```
+
+| Variable | Keterangan |
+|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | URL project Supabase |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Public key (aman untuk client-side) |
+| `SUPABASE_SERVICE_ROLE_KEY` | Secret key, hanya dipakai di Server Actions (bypass RLS) |
+
+### Menjalankan Lokal
 
 ```bash
-# 1. Install dependencies
+# Install dependencies
 npm install
 
-# 2. Buat file .env.local (isi dengan Supabase credentials)
-NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=xxxxx
-
-# 3. Jalankan SQL di Supabase SQL Editor (urutan penting!)
-#    → create_tables.sql
-#    → migration_belanja.sql
-#    → migration_inventory.sql
-#    → seed_dummy_data.sql (opsional, untuk data testing)
-
-# 4. Buat bucket "nota-belanja" di Supabase Storage (public)
-
-# 5. Jalankan development server
+# Jalankan development server
 npm run dev
+
+# Buka di browser
+# http://localhost:3000
 ```
 
-Aplikasi akan berjalan di `http://localhost:3000`
+---
+
+## 📝 Catatan Versi 1
+
+- Sistem belanja menggunakan tabel `transactions` (bukan `belanja`)
+- Tabel `pembayaran_transaksi` dipisah dari `pembayaran_belanja` untuk menjaga integritas data
+- Upload foto nota disimpan di Supabase Storage bucket `nota-belanja`
+- Body size limit Server Actions: **10MB** (untuk upload foto berkualitas tinggi)
+- Sidebar menu disesuaikan per role secara dinamis
 
 ---
 
-## 📱 Fitur-Fitur Aplikasi
-
-### 1. 📊 Dashboard (`/`)
-
-**Deskripsi:** Halaman utama yang menampilkan ringkasan seluruh data Sarpras dalam satu pandangan.
-
-**Komponen:**
-- **4 Kartu Statistik:**
-  - Pengeluaran Bulan Ini (Cash + Transfer)
-  - Utang Belum Lunas
-  - Kerusakan Aktif (status: dilaporkan/diproses)
-  - Total Transaksi Bulan Ini
-- **Banner Peringatan Stok Rendah** — Muncul otomatis jika ada barang inventaris dengan stok < 5
-- **Tabel 5 Transaksi Terbaru** — dengan badge metode bayar (Cash/Transfer/Utang)
-- **Tabel 5 Kerusakan Terbaru** — dengan badge status (Dilaporkan/Diproses/Selesai/Ditolak)
-- **Tombol Refresh Data** — dengan animasi spinning dan toast notifikasi
-
----
-
-### 2. 🛒 Pendataan Belanja Baru (`/belanja/baru`)
-
-**Deskripsi:** Form untuk mencatat transaksi belanja sarpras secara detail.
-
-**Komponen:**
-- **Header Transaksi:**
-  - Judul belanja
-  - Nama toko
-  - Tanggal transaksi
-  - Kategori (Listrik, Bangunan, ATK, Kebersihan, Elektronik, Furniture, Lainnya)
-  - Metode bayar (Cash / Transfer / Utang)
-- **Daftar Item Belanja (dinamis):**
-  - Nama barang, jumlah, satuan, harga satuan
-  - Subtotal otomatis per baris
-  - Tombol tambah/hapus baris
-  - Grand total otomatis
-- **Upload Foto Nota:**
-  - Preview gambar
-  - Auto-compress gambar di bawah 200KB sebelum upload
-  - Toast info menampilkan ukuran sebelum & sesudah kompresi
-- **Integrasi Inventaris:**
-  - Saat transaksi disimpan (Cash/Transfer), stok barang otomatis bertambah di inventaris
-  - Jika barang belum ada di inventaris, otomatis dibuat entry baru
-  - Setiap perubahan stok dicatat di `inventory_stock_log`
-
----
-
-### 3. 📦 Inventaris Barang (`/inventaris`)
-
-**Deskripsi:** Kelola seluruh aset barang milik pesantren.
-
-**Komponen:**
-- **Stats Bar** — Jumlah jenis barang & jumlah stok rendah
-- **Pencarian** — Cari berdasarkan nama barang, lokasi, atau kategori
-- **Filter:**
-  - Berdasarkan kategori (7 pilihan)
-  - Berdasarkan level stok (Semua / Stok Rendah / Stok Aman)
-- **Tabel Inventaris (Desktop)** — Nama, Kategori, Stok (dengan badge warna), Lokasi, Aksi
-- **Card View (Mobile)** — Layout responsif untuk HP
-- **Tambah Barang Baru** — Modal form lengkap
-- **Edit Barang** — Modal form pre-filled
-- **Hapus Barang** — Dengan konfirmasi
-- **Update Stok Cepat:**
-  - Modal dengan tombol +/- visual
-  - Input keterangan (opsional)
-  - Stok baru ditampilkan secara real-time
-  - Setiap perubahan dicatat di log audit
-- **Indikator Low Stock:**
-  - 🟢 Hijau = Stok aman (≥ 5)
-  - 🟡 Kuning + animasi pulse = Stok rendah (1-4)
-  - 🔴 Merah + animasi pulse = Stok habis (0)
-
----
-
-### 4. ⚠️ Laporan Kerusakan (`/kerusakan`)
-
-**Deskripsi:** Sistem pelaporan dan tracking kerusakan fasilitas pesantren.
-
-**Komponen:**
-- **Tab Navigasi:**
-  - Tab "Tindakan" — Daftar kerusakan yang pending (dilaporkan/diproses)
-  - Tab "Riwayat" — Daftar kerusakan yang sudah selesai/ditolak
-- **Tambah Laporan Baru:**
-  - Nama pelapor
-  - Nama barang rusak
-  - Deskripsi kerusakan
-- **Update Status** — Dropdown per item: Dilaporkan → Diproses → Selesai / Ditolak
-- **Edit & Hapus** — CRUD lengkap untuk setiap laporan
-- **Badge Status** — Warna berbeda per status:
-  - 🟡 Dilaporkan (kuning)
-  - 🔵 Diproses (biru)
-  - 🟢 Selesai (hijau)
-  - 🔴 Ditolak (merah)
-- **Toast Notifikasi** — Feedback di setiap aksi (simpan, edit, hapus, ubah status)
-
----
-
-### 5. 📑 Laporan Bulanan (`/laporan`)
-
-**Deskripsi:** Rekapitulasi pengeluaran bulanan dengan fitur export Excel.
-
-**Komponen:**
-- **Filter Bulan & Tahun** — Pilih periode laporan
-- **4 Kartu Ringkasan:**
-  - Total Pengeluaran (semua metode)
-  - Total Cash
-  - Total Transfer
-  - Total Utang
-- **Tabel Transaksi** — No, Tanggal, Judul, Toko, Kategori, Metode, Total, Status
-- **Tombol Export Excel:**
-  - Download file `.xlsx` otomatis
-  - Format nama: `Rekap_Belanja_Februari_2026_2026-02-25.xlsx`
-  - Kolom: Tanggal, Judul, Toko, Kategori, Metode Bayar, Grand Total, Status
-  - Toast saat export berhasil/gagal
-
----
-
-### 6. 🔔 Sistem Toast Notifikasi (Global)
-
-**Deskripsi:** Notifikasi pop-up yang konsisten di seluruh aplikasi.
-
-| Tipe | Warna | Contoh Penggunaan |
-|------|-------|-------------------|
-| `success` | 🟢 Hijau | "Belanja berhasil disimpan!" |
-| `error` | 🔴 Merah | "Gagal mengirim laporan" |
-| `info` | 🔵 Biru | "Foto dikompres: 1200KB → 180KB" |
-
-- Auto-dismiss setelah beberapa detik
-- Bisa ditutup manual dengan tombol X
-- Animasi slide-in dari kanan atas
-
----
-
-### 7. 📱 PWA (Progressive Web App)
-
-**Deskripsi:** Aplikasi bisa di-install ke Home Screen HP tanpa perlu Play Store.
-
-- `manifest.json` terkonfigurasi (nama, ikon, warna tema)
-- Meta tag PWA di `layout.js`
-- Mode standalone (tanpa address bar browser)
-- Cara install: Buka di Chrome HP → Menu ⋮ → "Add to Home Screen"
-
----
-
-## 🗄️ Struktur Database
-
-### Tabel: `transactions`
-| Kolom | Tipe | Deskripsi |
-|-------|------|-----------|
-| id | UUID | Primary key |
-| judul | TEXT | Judul/nama transaksi |
-| toko | TEXT | Nama toko belanja |
-| tanggal | DATE | Tanggal transaksi |
-| kategori | TEXT | Kategori (listrik, bangunan, atk, dll) |
-| total_bayar | NUMERIC | Grand total pembayaran |
-| metode_bayar | TEXT | cash / transfer / utang |
-| foto_nota_url | TEXT | URL foto nota di Supabase Storage |
-| status_lunas | BOOLEAN | Status pembayaran |
-| created_at | TIMESTAMPTZ | Waktu dibuat |
-| updated_at | TIMESTAMPTZ | Waktu terakhir diperbarui |
-
-### Tabel: `transaction_items`
-| Kolom | Tipe | Deskripsi |
-|-------|------|-----------|
-| id | UUID | Primary key |
-| transaction_id | UUID | FK ke transactions |
-| nama_barang | TEXT | Nama item belanja |
-| jumlah | INTEGER | Jumlah pembelian |
-| satuan | TEXT | Satuan (pcs, box, sak, dll) |
-| harga_satuan | NUMERIC | Harga per satuan |
-
-### Tabel: `inventory`
-| Kolom | Tipe | Deskripsi |
-|-------|------|-----------|
-| id | UUID | Primary key |
-| nama_barang | TEXT | Nama barang |
-| kategori | TEXT | Kategori (7 pilihan) |
-| stok_saat_ini | INTEGER | Stok terkini (min: 0) |
-| satuan | TEXT | Satuan (13 pilihan) |
-| lokasi_penyimpanan | TEXT | Lokasi gudang/rak |
-| created_at | TIMESTAMPTZ | Waktu dibuat |
-| updated_at | TIMESTAMPTZ | Waktu terakhir diperbarui |
-
-### Tabel: `inventory_stock_log`
-| Kolom | Tipe | Deskripsi |
-|-------|------|-----------|
-| id | UUID | Primary key |
-| inventory_id | UUID | FK ke inventory |
-| perubahan | INTEGER | Jumlah perubahan (+/-) |
-| stok_sebelum | INTEGER | Stok sebelum perubahan |
-| stok_sesudah | INTEGER | Stok sesudah perubahan |
-| keterangan | TEXT | Catatan perubahan |
-| transaction_id | UUID | FK ke transactions (jika dari belanja) |
-| created_at | TIMESTAMPTZ | Waktu perubahan |
-
-### Tabel: `damage_reports`
-| Kolom | Tipe | Deskripsi |
-|-------|------|-----------|
-| id | UUID | Primary key |
-| nama_pelapor | TEXT | Nama orang yang melapor |
-| nama_barang | TEXT | Nama barang rusak |
-| deskripsi | TEXT | Deskripsi kerusakan |
-| status | TEXT | dilaporkan / diproses / selesai / ditolak |
-| created_at | TIMESTAMPTZ | Waktu laporan dibuat |
-| updated_at | TIMESTAMPTZ | Waktu terakhir diperbarui |
-
----
-
-## ✅ Checklist Pengecekan Manual (Testing)
-
-### A. Dashboard (`/`)
-
-| No | Test Case | Langkah | Expected Result | ✅/❌ |
-|----|-----------|---------|-----------------|-------|
-| A1 | Halaman tampil | Buka `localhost:3000` | Dashboard tampil dengan 4 kartu statistik | ☐ |
-| A2 | Data statistik akurat | Bandingkan dengan data di Supabase | Angka sesuai dengan data di database | ☐ |
-| A3 | Tabel transaksi terbaru | Lihat tabel "5 Transaksi Terbaru" | Menampilkan 5 data terbaru, urut dari paling baru | ☐ |
-| A4 | Tabel kerusakan terbaru | Lihat tabel "5 Kerusakan Terbaru" | Menampilkan 5 data terbaru dengan badge status | ☐ |
-| A5 | Refresh data | Klik tombol "Refresh Data" | Animasi spin, data dimuat ulang, muncul toast "berhasil" | ☐ |
-| A6 | Banner stok rendah | Pastikan ada barang stok < 5 | Banner kuning muncul dengan jumlah barang + link ke inventaris | ☐ |
-| A7 | Link navigasi | Klik "Tambah Baru →" dan "Lihat Semua →" | Navigasi ke halaman yang benar | ☐ |
-| A8 | Responsive mobile | Resize browser ke 375px | Layout menyesuaikan, tidak overflow | ☐ |
-
-### B. Pendataan Belanja (`/belanja/baru`)
-
-| No | Test Case | Langkah | Expected Result | ✅/❌ |
-|----|-----------|---------|-----------------|-------|
-| B1 | Form tampil | Buka `/belanja/baru` | Form header + 1 baris item default tampil | ☐ |
-| B2 | Isi header | Isi judul, toko, tanggal, kategori, metode bayar | Semua field bisa diisi tanpa error | ☐ |
-| B3 | Tambah item | Isi nama barang, jumlah, harga → klik "Tambah Baris" | Baris baru muncul, subtotal terhitung otomatis | ☐ |
-| B4 | Grand total | Isi beberapa baris item dengan harga berbeda | Grand total = jumlah semua subtotal | ☐ |
-| B5 | Hapus item | Klik tombol hapus pada baris item | Baris terhapus, grand total terupdate | ☐ |
-| B6 | Upload foto nota | Pilih gambar > 200KB | Gambar dikompres, muncul toast info ukuran | ☐ |
-| B7 | Validasi form | Klik simpan tanpa mengisi judul | Muncul toast error validasi | ☐ |
-| B8 | Simpan cash | Isi lengkap, metode "Cash", klik Simpan | Toast sukses, form di-reset | ☐ |
-| B9 | Simpan utang | Isi lengkap, metode "Utang", klik Simpan | Toast sukses, status_lunas = false di database | ☐ |
-| B10 | Inventaris update (cash) | Simpan belanja cash → cek `/inventaris` | Stok barang bertambah / entry baru muncul | ☐ |
-| B11 | Inventaris tidak update (utang) | Simpan belanja utang → cek `/inventaris` | Stok barang TIDAK berubah | ☐ |
-| B12 | Responsive mobile | Buka dari HP | Form bisa digunakan, tidak overflow | ☐ |
-
-### C. Inventaris Barang (`/inventaris`)
-
-| No | Test Case | Langkah | Expected Result | ✅/❌ |
-|----|-----------|---------|-----------------|-------|
-| C1 | Daftar barang tampil | Buka `/inventaris` | Tabel 20 barang dummy tampil | ☐ |
-| C2 | Stats bar | Lihat bagian atas | Jumlah jenis barang & jumlah stok rendah sesuai | ☐ |
-| C3 | Pencarian nama | Ketik "lampu" di search box | Hanya barang mengandung "lampu" yang muncul | ☐ |
-| C4 | Pencarian lokasi | Ketik "gudang" di search box | Hanya barang di gudang yang muncul | ☐ |
-| C5 | Filter kategori | Pilih "ATK" di dropdown kategori | Hanya barang ATK yang tampil | ☐ |
-| C6 | Filter stok rendah | Pilih "⚠️ Stok Rendah" | Hanya barang stok < 5 yang tampil | ☐ |
-| C7 | Clear search | Klik tombol X di search box | Pencarian direset, semua barang tampil kembali | ☐ |
-| C8 | Tambah barang | Klik "Tambah Barang" → isi form → Simpan | Barang baru muncul di tabel + toast sukses | ☐ |
-| C9 | Edit barang | Klik ikon Edit → ubah nama → Simpan | Data terupdate di tabel + toast sukses | ☐ |
-| C10 | Hapus barang | Klik ikon Hapus → konfirmasi "OK" | Barang hilang dari tabel + toast sukses | ☐ |
-| C11 | Update stok + (tambah) | Klik ikon Stok → tekan + 3x → Simpan | Badge stok berubah, toast: "ditambah 3 → sekarang X" | ☐ |
-| C12 | Update stok - (kurangi) | Klik ikon Stok → tekan - 2x → Simpan | Badge stok berkurang, toast: "dikurangi -2 → sekarang X" | ☐ |
-| C13 | Stok tidak boleh negatif | Kurangi stok barang yang stoknya 1, tekan - 3x | Tombol - disabled saat akan jadi negatif | ☐ |
-| C14 | Indikator stok habis | Lihat barang dengan stok 0 (Pulpen Hitam) | Badge merah + baris highlight merah + animasi pulse | ☐ |
-| C15 | Indikator stok rendah | Lihat barang stok 1-4 (Cat Tembok, Kain Pel) | Badge kuning + baris highlight kuning + animasi pulse | ☐ |
-| C16 | Indikator stok aman | Lihat barang stok ≥ 5 (Kertas HVS, Paku) | Badge hijau, tanpa highlight | ☐ |
-| C17 | Mobile card view | Resize ke 375px | Tabel berubah jadi card layout | ☐ |
-| C18 | Footer counter | Setelah filter | "Menampilkan X dari Y barang" akurat | ☐ |
-
-### D. Laporan Kerusakan (`/kerusakan`)
-
-| No | Test Case | Langkah | Expected Result | ✅/❌ |
-|----|-----------|---------|-----------------|-------|
-| D1 | Tab Tindakan | Buka `/kerusakan`, tab "Tindakan" aktif | Menampilkan kerusakan status dilaporkan/diproses | ☐ |
-| D2 | Tab Riwayat | Klik tab "Riwayat" | Menampilkan kerusakan status selesai/ditolak | ☐ |
-| D3 | Tambah laporan | Klik "Tambah Laporan" → isi → Simpan | Laporan muncul di tab Tindakan + toast sukses | ☐ |
-| D4 | Edit laporan | Klik Edit → ubah deskripsi → Simpan | Data terupdate + toast sukses | ☐ |
-| D5 | Hapus laporan | Klik Hapus → konfirmasi | Laporan hilang + toast sukses | ☐ |
-| D6 | Ubah status ke "Diproses" | Ubah dropdown status dari "Dilaporkan" ke "Diproses" | Badge berubah jadi biru + toast sukses | ☐ |
-| D7 | Ubah status ke "Selesai" | Ubah dropdown ke "Selesai" | Item berpindah ke tab Riwayat + toast sukses | ☐ |
-| D8 | Ubah status ke "Ditolak" | Ubah dropdown ke "Ditolak" | Item berpindah ke tab Riwayat + toast | ☐ |
-| D9 | Responsive mobile | Buka dari HP | Layout dan form bisa digunakan | ☐ |
-
-### E. Laporan Bulanan (`/laporan`)
-
-| No | Test Case | Langkah | Expected Result | ✅/❌ |
-|----|-----------|---------|-----------------|-------|
-| E1 | Halaman tampil | Buka `/laporan` | Filter bulan/tahun + kartu ringkasan + tabel transaksi | ☐ |
-| E2 | Default bulan | Buka pertama kali | Filter menunjukkan bulan & tahun saat ini (Feb 2026) | ☐ |
-| E3 | Filter Januari | Pilih bulan Januari 2026 | Data berubah menampilkan transaksi Januari saja | ☐ |
-| E4 | Filter Februari | Pilih bulan Februari 2026 | Data berubah menampilkan transaksi Februari saja | ☐ |
-| E5 | Kartu ringkasan akurat | Bandingkan total Cash + Transfer + Utang | Total Pengeluaran = Cash + Transfer + Utang | ☐ |
-| E6 | Export Excel | Klik "Download Rekap Belanja (Excel)" | File .xlsx terdownload + toast sukses | ☐ |
-| E7 | Isi file Excel | Buka file xlsx yang didownload | Data sesuai tabel di halaman, format tanggal Indonesia | ☐ |
-| E8 | Responsive mobile | Buka dari HP | Tabel bisa di-scroll horizontal, filter bisa digunakan | ☐ |
-
-### F. Navigasi & Global
-
-| No | Test Case | Langkah | Expected Result | ✅/❌ |
-|----|-----------|---------|-----------------|-------|
-| F1 | Sidebar navigasi | Klik setiap menu di sidebar | Navigasi ke halaman yang benar, menu aktif ter-highlight | ☐ |
-| F2 | Sidebar responsive | Resize ke 768px | Sidebar collapse / hamburger menu | ☐ |
-| F3 | Toast notification | Lakukan aksi yang memunculkan toast | Toast muncul di kanan atas, auto-close setelah beberapa detik | ☐ |
-| F4 | PWA install | Buka di Chrome HP → Menu → "Add to Home Screen" | Aplikasi ter-install, buka tanpa address bar | ☐ |
-| F5 | Loading state | Refresh halaman saat koneksi lambat | Spinner/loading indicator tampil | ☐ |
-| F6 | Empty state | Kosongkan data / filter yang tidak ada hasilnya | Pesan "Belum Ada Data" atau "Tidak Ditemukan" | ☐ |
-
----
-
-## 📊 Ringkasan Test Cases
-
-| Kategori | Jumlah Test | Prioritas |
-|----------|-------------|-----------|
-| A. Dashboard | 8 | 🟡 Medium |
-| B. Pendataan Belanja | 12 | 🔴 High |
-| C. Inventaris Barang | 18 | 🔴 High |
-| D. Laporan Kerusakan | 9 | 🟡 Medium |
-| E. Laporan Bulanan | 8 | 🟡 Medium |
-| F. Navigasi & Global | 6 | 🟢 Low |
-| **TOTAL** | **61** | |
-
----
-
-## 📌 Catatan Penting
-
-1. **Urutan SQL wajib diikuti:**
-   ```
-   create_tables.sql → migration_belanja.sql → migration_inventory.sql → seed_dummy_data.sql
-   ```
-
-2. **Integrasi Belanja ↔ Inventaris:**
-   - Cash/Transfer → stok otomatis bertambah
-   - Utang → stok TIDAK berubah (by design, sampai lunas)
-
-3. **Low Stock Alert:** Threshold default = **5 unit**. Ubah di `app/inventaris/page.js` variabel `LOW_STOCK_THRESHOLD` jika ingin ganti
-
-4. **Image Compression:** Semua foto nota otomatis dikompres < 200KB sebelum upload ke Supabase Storage
-
-5. **Dependencies yang perlu di-install:**
-   ```bash
-   npm install xlsx browser-image-compression
-   ```
-
----
-
-*Dibuat: 25 Februari 2026*
-*Versi: 1.0*
+*Dokumentasi ini dibuat pada 27 Februari 2026 — Versi 1.0*

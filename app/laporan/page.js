@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useContext } from 'react';
+import { useRouter } from 'next/navigation';
 import Header from '@/components/Header';
 import { useToast } from '@/components/Toast';
 import { AuthContext } from '@/components/AuthProvider';
@@ -19,6 +20,7 @@ const formatRupiah = (num) =>
 export default function LaporanPage() {
   const { userProfile } = useContext(AuthContext);
   const { addToast } = useToast();
+  const router = useRouter();
   const now = new Date();
 
   const [bulan, setBulan] = useState(now.getMonth());
@@ -54,7 +56,18 @@ export default function LaporanPage() {
       const total = txs.reduce((s, t) => s + (parseFloat(t.total_bayar) || 0), 0);
       const cash = txs.filter((t) => t.metode_bayar === 'cash').reduce((s, t) => s + (parseFloat(t.total_bayar) || 0), 0);
       const transfer = txs.filter((t) => t.metode_bayar === 'transfer').reduce((s, t) => s + (parseFloat(t.total_bayar) || 0), 0);
-      const utang = txs.filter((t) => t.metode_bayar === 'utang').reduce((s, t) => s + (parseFloat(t.total_bayar) || 0), 0);
+
+      // Utang = sisa tagihan aktual (bukan total_bayar mentah)
+      // Pakai sisa_tagihan jika ada, fallback ke total_bayar untuk transaksi tanpa pembayaran
+      const utang = txs
+        .filter((t) => !t.status_lunas)
+        .reduce((s, t) => {
+          const sisa = t.sisa_tagihan != null
+            ? parseFloat(t.sisa_tagihan)
+            : parseFloat(t.total_bayar) || 0;
+          return s + sisa;
+        }, 0);
+
       setSummary({ total, cash, transfer, utang, count: txs.length });
     } catch (err) {
       addToast('Gagal memuat data: ' + (err.message || ''), 'error');
@@ -190,7 +203,7 @@ export default function LaporanPage() {
                   </thead>
                   <tbody>
                     {transactions.map((tx, idx) => (
-                      <tr key={tx.id}>
+                       <tr key={tx.id} onClick={() => router.push(`/laporan/${tx.id}`)} style={{ cursor: 'pointer' }}>
                         <td>{idx + 1}</td>
                         <td className={styles.dateCell}>{formatDate(tx.tanggal || tx.created_at)}</td>
                         <td><strong>{tx.judul}</strong></td>

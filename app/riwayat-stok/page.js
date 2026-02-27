@@ -7,19 +7,65 @@ import { supabase } from '@/lib/supabase';
 import { getStockLogs } from '@/lib/stockService';
 import styles from './page.module.css';
 
+// SVG icon components — solid line, monochromatic
+const IcMasuk = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 2v20M2 12l10 10 10-10"/>
+  </svg>
+);
+const IcKeluar = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 22V2M2 12l10-10 10 10"/>
+  </svg>
+);
+const IcSesuai = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 20V4M4 12l8-8 8 8M4 20h16"/>
+  </svg>
+);
+const IcRusak = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+    <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+  </svg>
+);
+
+// Stat bar icons (larger)
+const IcMasukLg = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 2v20M2 12l10 10 10-10"/>
+  </svg>
+);
+const IcKeluarLg = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 22V2M2 12l10-10 10 10"/>
+  </svg>
+);
+const IcSesuaiLg = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+  </svg>
+);
+const IcRusakLg = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+    <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+  </svg>
+);
+
 const TYPE_OPTIONS = [
   { value: '', label: 'Semua Tipe' },
-  { value: 'in', label: '📦 Barang Masuk' },
-  { value: 'out', label: '📤 Barang Keluar' },
-  { value: 'adjustment', label: '🔧 Penyesuaian' },
-  { value: 'damage', label: '💥 Kerusakan' },
+  { value: 'in', label: '↓ Barang Masuk' },
+  { value: 'out', label: '↑ Barang Keluar' },
+  { value: 'adjustment', label: '⇄ Penyesuaian' },
+  { value: 'damage', label: '⚠ Kerusakan' },
 ];
 
 const TYPE_LABELS = {
-  in: { label: 'Masuk', icon: '📦', cls: 'typeIn' },
-  out: { label: 'Keluar', icon: '📤', cls: 'typeOut' },
-  adjustment: { label: 'Penyesuaian', icon: '🔧', cls: 'typeAdjustment' },
-  damage: { label: 'Kerusakan', icon: '💥', cls: 'typeDamage' },
+  in:         { label: 'Masuk',       icon: <IcMasuk />,  cls: 'typeIn' },
+  out:        { label: 'Keluar',      icon: <IcKeluar />, cls: 'typeOut' },
+  adjustment: { label: 'Penyesuaian', icon: <IcSesuai />, cls: 'typeAdjustment' },
+  damage:     { label: 'Kerusakan',   icon: <IcRusak />,  cls: 'typeDamage' },
 };
 
 const REF_LABELS = {
@@ -165,28 +211,28 @@ export default function RiwayatStokPage() {
         {/* ===== Stats Bar ===== */}
         <div className={styles.statsBar}>
           <div className={`${styles.statChip} ${styles.statChipIn}`}>
-            <span className={styles.statIcon}>📦</span>
+            <span className={styles.statIcon}><IcMasukLg /></span>
             <div className={styles.statContent}>
               <span className={styles.statValue}>{stats.inCount}</span>
               <span className={styles.statLabel}>Masuk</span>
             </div>
           </div>
           <div className={`${styles.statChip} ${styles.statChipOut}`}>
-            <span className={styles.statIcon}>📤</span>
+            <span className={styles.statIcon}><IcKeluarLg /></span>
             <div className={styles.statContent}>
               <span className={styles.statValue}>{stats.outCount}</span>
               <span className={styles.statLabel}>Keluar</span>
             </div>
           </div>
           <div className={`${styles.statChip} ${styles.statChipAdj}`}>
-            <span className={styles.statIcon}>🔧</span>
+            <span className={styles.statIcon}><IcSesuaiLg /></span>
             <div className={styles.statContent}>
               <span className={styles.statValue}>{stats.adjCount}</span>
               <span className={styles.statLabel}>Penyesuaian</span>
             </div>
           </div>
           <div className={`${styles.statChip} ${styles.statChipDmg}`}>
-            <span className={styles.statIcon}>💥</span>
+            <span className={styles.statIcon}><IcRusakLg /></span>
             <div className={styles.statContent}>
               <span className={styles.statValue}>{stats.dmgCount}</span>
               <span className={styles.statLabel}>Kerusakan</span>
