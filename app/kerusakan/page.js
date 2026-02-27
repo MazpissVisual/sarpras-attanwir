@@ -269,7 +269,8 @@ export default function KerusakanPage() {
 
   const formatDate = (d) => new Date(d).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
 
-  const isReadOnly = !['superadmin', 'admin', 'staff'].includes(userProfile?.role);
+  const cleanRole = userProfile?.role ? userProfile.role.toLowerCase().replace(/[\s_-]+/g, '') : '';
+  const isReadOnly = !['superadmin', 'admin', 'staff'].includes(cleanRole);
 
   return (
     <>

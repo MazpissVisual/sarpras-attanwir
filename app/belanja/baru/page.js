@@ -44,8 +44,9 @@ export default function BelanjaBaru() {
   const nativeCameraRef = useRef(null);
   const [cameraOpen, setCameraOpen] = useState(false);
   const { userProfile } = useContext(AuthContext);
-  const isReadOnly = !['superadmin', 'admin', 'staff'].includes(userProfile?.role);
-  const hasBelanjaAccess = userProfile?.role === 'superadmin' || userProfile?.role === 'admin' || (userProfile?.access_rights || []).includes('Belanja');
+  const cleanRole = userProfile?.role ? userProfile.role.toLowerCase().replace(/[\s_-]+/g, '') : '';
+  const isReadOnly = !['superadmin', 'admin', 'staff'].includes(cleanRole);
+  const hasBelanjaAccess = cleanRole === 'superadmin' || cleanRole === 'admin' || (userProfile?.access_rights || []).includes('Belanja');
 
   // ===== Form Header =====
   const [header, setHeader] = useState({

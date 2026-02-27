@@ -35,13 +35,20 @@ export function middleware(req) {
     return NextResponse.redirect(new URL('/login', req.url));
   }
 
+  // Helper function to check if role is super admin
+  const isSuperAdminRole = (r) => {
+    if (!r) return false;
+    const cleanRole = r.toLowerCase().replace(/[\s_-]+/g, '');
+    return cleanRole === 'superadmin' || cleanRole === 'admin';
+  };
+
   // 4. Jika role adalah Super Admin atau Admin, izinkan melihat segalanya
-  if (role === 'superadmin' || role === 'admin') {
+  if (isSuperAdminRole(role)) {
     return NextResponse.next();
   }
 
   // 5. Pembatasan Pengaturan User hanya untuk Superadmin
-  if (path.startsWith('/pengaturan-user') && role !== 'superadmin') {
+  if (path.startsWith('/pengaturan-user') && !isSuperAdminRole(role)) {
     return NextResponse.redirect(new URL('/unauthorized', req.url));
   }
 

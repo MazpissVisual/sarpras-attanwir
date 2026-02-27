@@ -36,7 +36,8 @@ export default function PengaturanUserPage() {
 
   // Role Protection
   useEffect(() => {
-    if (!authLoading && userProfile?.role !== 'superadmin') {
+    const isSuperAdmin = userProfile?.role && userProfile.role.toLowerCase().replace(/[\s_-]+/g, '') === 'superadmin';
+    if (!authLoading && !isSuperAdmin) {
       addToast('Akses ditolak: Hanya Super Admin yang dapat mengakses Management User.', 'error');
       router.push('/');
     }
@@ -58,7 +59,8 @@ export default function PengaturanUserPage() {
   }, [addToast]);
 
   useEffect(() => {
-    if (userProfile?.role === 'superadmin') {
+    const isSuperAdmin = userProfile?.role && userProfile.role.toLowerCase().replace(/[\s_-]+/g, '') === 'superadmin';
+    if (isSuperAdmin) {
       fetchUsers();
     }
   }, [fetchUsers, userProfile]);
@@ -125,7 +127,8 @@ export default function PengaturanUserPage() {
     if (userProfile?.id === id) {
        return addToast('Anda tidak bisa menghapus akun Anda sendiri.', 'error');
     }
-    if (userRole === 'superadmin') {
+    const isTargetSuperAdmin = userRole && userRole.toLowerCase().replace(/[\s_-]+/g, '') === 'superadmin';
+    if (isTargetSuperAdmin) {
        return addToast('Tidak bisa menghapus sesama Super Admin.', 'error');
     }
 
@@ -196,13 +199,12 @@ export default function PengaturanUserPage() {
                       </div>
                     </td>
 
-                    {/* Column 2: Action Badge (Role) */}
                     <td>
-                      <div className={`${styles.roleDivInfo} ${u.role === 'superadmin' || u.role === 'admin' ? styles.superRole : u.role === 'pimpinan' || u.role === 'kepala_sekolah' ? styles.kepsekRole : ''}`}>
+                      <div className={`${styles.roleDivInfo} ${u.role && (u.role.toLowerCase().replace(/[\s_-]+/g, '') === 'superadmin' || u.role.toLowerCase().replace(/[\s_-]+/g, '') === 'admin') ? styles.superRole : u.role === 'pimpinan' || u.role === 'kepala_sekolah' ? styles.kepsekRole : ''}`}>
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                           <circle cx="12" cy="12" r="10" />
                         </svg>
-                        <span style={{ textTransform: 'capitalize' }}>{u.role === 'superadmin' ? 'Super Admin' : u.role === 'kepala_sekolah' ? 'Pimpinan' : u.role}</span>
+                        <span style={{ textTransform: 'capitalize' }}>{u.role && u.role.toLowerCase().replace(/[\s_-]+/g, '') === 'superadmin' ? 'Super Admin' : u.role === 'kepala_sekolah' ? 'Pimpinan' : u.role}</span>
                       </div>
                     </td>
 

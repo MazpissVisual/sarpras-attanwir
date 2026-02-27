@@ -26,7 +26,8 @@ export default function LaporanPage() {
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
-  const isReadOnly = !['superadmin', 'admin', 'staff'].includes(userProfile?.role);
+  const cleanRole = userProfile?.role ? userProfile.role.toLowerCase().replace(/[\s_-]+/g, '') : '';
+  const isReadOnly = !['superadmin', 'admin', 'staff'].includes(cleanRole);
 
   // Summary
   const [summary, setSummary] = useState({ total: 0, cash: 0, transfer: 0, utang: 0, count: 0 });

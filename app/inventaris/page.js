@@ -265,7 +265,8 @@ export default function InventarisPage() {
     return 'ok';
   };
 
-  const isReadOnly = !['superadmin', 'admin', 'staff'].includes(userProfile?.role);
+  const cleanRole = userProfile?.role ? userProfile.role.toLowerCase().replace(/[\s_-]+/g, '') : '';
+  const isReadOnly = !['superadmin', 'admin', 'staff'].includes(cleanRole);
 
   return (
     <>

@@ -163,7 +163,8 @@ export default function Sidebar() {
               const active = isActive(item);
               
               // Validate dynamic rights
-              const isAdmin = userProfile?.role === 'superadmin' || userProfile?.role === 'admin';
+              const cleanRole = userProfile?.role ? userProfile.role.toLowerCase().replace(/[\s_-]+/g, '') : '';
+              const isAdmin = cleanRole === 'superadmin' || cleanRole === 'admin';
               const routeToRightMap = {
                 '/belanja/baru': 'Belanja',
                 '/inventaris': 'Inventaris',
@@ -194,7 +195,7 @@ export default function Sidebar() {
             })}
 
             {/* Manajemen User - Super Admin Only */}
-            {userProfile?.role === 'superadmin' && (
+            {userProfile?.role && userProfile.role.toLowerCase().replace(/[\s_-]+/g, '') === 'superadmin' && (
               <li key="/pengaturan-user" style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--color-border)' }}>
                 <p className={styles.navLabel} style={{ marginBottom: '8px', paddingLeft: '4px', fontSize: '11px', fontWeight: 700, color: 'var(--color-text-muted)' }}>ADMIN</p>
                 <Link
@@ -225,7 +226,7 @@ export default function Sidebar() {
             <div className={styles.footerUserInfo}>
               <span className={styles.footerUserName} style={{ textTransform: 'capitalize' }}>{userProfile?.full_name || userName}</span>
               <span className={styles.footerUserRole} style={{ textTransform: 'capitalize' }}>
-                {userProfile ? (userProfile.role === 'superadmin' ? 'Super Admin' : userProfile.role.replace('_', ' ')) : 'Staff'}
+                {userProfile ? (userProfile.role && userProfile.role.toLowerCase().replace(/[\s_-]+/g, '') === 'superadmin' ? 'Super Admin' : userProfile.role.replace('_', ' ')) : 'Staff'}
               </span>
             </div>
           </div>
