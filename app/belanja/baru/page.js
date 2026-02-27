@@ -60,9 +60,8 @@ export default function BelanjaBaru() {
   // ===== Dynamic Item Rows =====
   const [items, setItems] = useState([emptyItem()]);
 
-  // ===== File Upload =====
-  const [notaFile, setNotaFile] = useState(null);
-  const [notaPreview, setNotaPreview] = useState(null);
+  // ===== File Upload (Multiple) =====
+  const [fotos, setFotos] = useState([]);
   const [uploading, setUploading] = useState(false);
 
   // ===== Submitting =====
@@ -104,88 +103,78 @@ export default function BelanjaBaru() {
     setItems((prev) => prev.filter((_, i) => i !== index));
   };
 
-  // ===== File Upload Handler =====
-  const handleFileSelect = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  // ===== File Upload Handler (Multiple) =====
+  const handleAddPhotos = async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
 
-    if (!file.type.startsWith('image/')) {
-      addToast('Hanya file gambar yang diperbolehkan', 'error');
-      return;
-    }
+    // Filter images and size under 5MB
+    const validFiles = files.filter(f => {
+      if (!f.type.startsWith('image/')) {
+        addToast(`File ${f.name} bukan gambar`, 'error');
+        return false;
+      }
+      if (f.size > 5 * 1024 * 1024) {
+        addToast(`Ukuran file ${f.name} lebih dari 5MB`, 'error');
+        return false;
+      }
+      return true;
+    });
 
-    if (file.size > 5 * 1024 * 1024) {
-      addToast('Ukuran file maksimal 5MB', 'error');
-      return;
-    }
+    const newFotos = await Promise.all(validFiles.map(async f => {
+      const compressed = await compressImage(f, 200);
+      const originalKB = (f.size / 1024).toFixed(0);
+      const compressedKB = (compressed.size / 1024).toFixed(0);
+      if (compressed !== f) {
+        console.log(`Foto dikompres: ${originalKB}KB → ${compressedKB}KB`);
+      }
+      return { file: compressed, preview: URL.createObjectURL(compressed), name: compressed.name, size: compressed.size };
+    }));
 
-    // Compress image under 200KB
-    const compressed = await compressImage(file, 200);
-    const originalKB = (file.size / 1024).toFixed(0);
-    const compressedKB = (compressed.size / 1024).toFixed(0);
-    if (compressed !== file) {
-      addToast(`Foto dikompres: ${originalKB}KB → ${compressedKB}KB`, 'info');
-    }
-
-    setNotaFile(compressed);
-    const reader = new FileReader();
-    reader.onload = (ev) => setNotaPreview(ev.target.result);
-    reader.readAsDataURL(compressed);
-  };
-
-  const removeFile = () => {
-    setNotaFile(null);
-    setNotaPreview(null);
+    setFotos(prev => [...prev, ...newFotos]);
+    
+    // reset input values so you can select again
     if (fileInputRef.current) fileInputRef.current.value = '';
+    if (nativeCameraRef.current) nativeCameraRef.current.value = '';
   };
 
-  // ===== Camera Capture Handler =====
-  const handleCameraCapture = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const compressed = await compressImage(file, 200);
-    const originalKB = (file.size / 1024).toFixed(0);
-    const compressedKB = (compressed.size / 1024).toFixed(0);
-    if (compressed !== file) {
-      addToast(`Foto dikompres: ${originalKB}KB → ${compressedKB}KB`, 'info');
-    }
-
-    setNotaFile(compressed);
-    const reader = new FileReader();
-    reader.onload = (ev) => setNotaPreview(ev.target.result);
-    reader.readAsDataURL(compressed);
+  const removePhoto = (idx) => {
+    setFotos(prev => prev.filter((_, i) => i !== idx));
   };
 
-  // ===== Upload to Supabase Storage =====
-  const uploadNota = async () => {
-    if (!notaFile) return null;
+  // ===== Upload to Supabase Storage Storage (Multiple) =====
+  const uploadPhotos = async () => {
+    if (fotos.length === 0) return [];
 
     setUploading(true);
+    const uploadedUrls = [];
     try {
-      const fileExt = notaFile.name.split('.').pop();
-      const fileName = `nota_${Date.now()}.${fileExt}`;
-      const filePath = `uploads/${fileName}`;
+      for (const fotoObj of fotos) {
+        const fileExt = fotoObj.file.name.split('.').pop();
+        const fileName = `nota_${Date.now()}_${Math.random().toString(36).substring(2, 9)}.${fileExt}`;
+        const filePath = `uploads/${fileName}`;
 
-      const { data, error } = await supabase.storage
-        .from('nota-belanja')
-        .upload(filePath, notaFile, {
-          cacheControl: '3600',
-          upsert: false,
-        });
+        const { data, error } = await supabase.storage
+          .from('nota-belanja')
+          .upload(filePath, fotoObj.file, {
+            cacheControl: '3600',
+            upsert: false,
+          });
 
-      if (error) throw error;
+        if (error) throw error;
 
-      // Get public URL
-      const { data: urlData } = supabase.storage
-        .from('nota-belanja')
-        .getPublicUrl(data.path);
+        // Get public URL
+        const { data: urlData } = supabase.storage
+          .from('nota-belanja')
+          .getPublicUrl(data.path);
 
-      return urlData.publicUrl;
+        uploadedUrls.push(urlData.publicUrl);
+      }
+      return uploadedUrls;
     } catch (err) {
       console.error('Upload error:', err.message);
       addToast('Gagal upload foto nota: ' + (err.message || ''), 'error');
-      return null;
+      return [];
     } finally {
       setUploading(false);
     }
@@ -232,10 +221,10 @@ export default function BelanjaBaru() {
 
     setSaving(true);
     try {
-      // 1. Upload file if exists
-      let fotoUrl = null;
-      if (notaFile) {
-        fotoUrl = await uploadNota();
+      // 1. Upload files if exist
+      let fotoUrls = [];
+      if (fotos.length > 0) {
+        fotoUrls = await uploadPhotos();
       }
 
       // 2. Insert transaction header
@@ -248,7 +237,8 @@ export default function BelanjaBaru() {
           kategori: header.kategori,
           total_bayar: grandTotal,
           metode_bayar: header.metode_bayar,
-          foto_nota_url: fotoUrl,
+          foto_nota_url: fotoUrls.length > 0 ? fotoUrls[0] : null,
+          foto_urls: fotoUrls,
           status_lunas: header.metode_bayar !== 'utang',
         }])
         .select()
@@ -301,7 +291,7 @@ export default function BelanjaBaru() {
         kategori: 'lainnya',
       });
       setItems([emptyItem()]);
-      removeFile();
+      setFotos([]);
 
     } catch (err) {
       console.error('Save error:', err.message);
@@ -621,7 +611,7 @@ export default function BelanjaBaru() {
               <span className={styles.optionalTag}>Opsional</span>
             </div>
 
-            {!notaPreview ? (
+            {fotos.length === 0 ? (
               <div className={styles.photoButtons}>
                 {/* Trigger Native Camera */}
                 <button type="button" className={styles.photoBtn} onClick={() => nativeCameraRef.current?.click()}>
@@ -639,33 +629,29 @@ export default function BelanjaBaru() {
                     <polyline points="21 15 16 10 5 21" />
                   </svg>
                   <p><strong>Pilih dari Galeri</strong></p>
-                  <small>PNG, JPG, JPEG (maks. 5MB)</small>
+                  <small>PNG, JPG (maks. 5MB)</small>
                 </button>
-                
-                {/* Hidden inputs are moved to bottom for cleanliness */}
               </div>
             ) : (
-              <div className={styles.previewContainer}>
-                <div className={styles.previewImage}>
-                  <img src={notaPreview} alt="Preview nota" />
-                </div>
-                <div className={styles.previewInfo}>
-                  <div className={styles.previewFile}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                      <circle cx="8.5" cy="8.5" r="1.5" />
-                      <polyline points="21 15 16 10 5 21" />
-                    </svg>
-                    <span>{notaFile?.name}</span>
-                    <small>({(notaFile?.size / 1024).toFixed(1)} KB)</small>
+              <div className="formGroup">
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '12px', marginBottom: '16px' }}>
+                  {fotos.map((f, i) => (
+                    <div key={i} style={{ position: 'relative', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--color-border)', height: '120px', background: '#f8fafc' }}>
+                      <img src={f.preview} alt="p" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <button type="button" style={{ position: 'absolute', top: '4px', right: '4px', background: 'rgba(0,0,0,0.5)', color: 'white', border: 'none', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '14px' }} onClick={() => removePhoto(i)}>×</button>
+                    </div>
+                  ))}
+                  
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <button type="button" onClick={() => nativeCameraRef.current.click()} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#fff', border: '1px dashed var(--color-border)', borderRadius: '8px', color: 'var(--color-primary)', cursor: 'pointer', transition: 'all 0.2s' }}>
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                      <span style={{ fontSize: '11px', marginTop: '4px' }}>Kamera</span>
+                    </button>
+                    <button type="button" onClick={() => fileInputRef.current.click()} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#fff', border: '1px dashed var(--color-border)', borderRadius: '8px', color: 'var(--color-primary)', cursor: 'pointer', transition: 'all 0.2s' }}>
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                      <span style={{ fontSize: '11px', marginTop: '4px' }}>Galeri</span>
+                    </button>
                   </div>
-                  <button type="button" className={styles.removeFileBtn} onClick={removeFile}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="3 6 5 6 21 6" />
-                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                    </svg>
-                    Hapus
-                  </button>
                 </div>
               </div>
             )}
@@ -712,7 +698,8 @@ export default function BelanjaBaru() {
         ref={fileInputRef} 
         type="file" 
         accept="image/*" 
-        onChange={handleFileSelect} 
+        multiple
+        onChange={handleAddPhotos} 
         hidden 
       />
       <input 
@@ -720,7 +707,8 @@ export default function BelanjaBaru() {
         type="file" 
         accept="image/*" 
         capture="environment" 
-        onChange={handleCameraCapture} 
+        multiple
+        onChange={handleAddPhotos} 
         hidden 
       />
     </>
