@@ -10,7 +10,7 @@ import { createUserAction, deleteUserAction, updateUserAction, getUsersAction } 
 import styles from './page.module.css';
 
 const ACCESS_RIGHTS_OPTIONS = [
-  'Inventaris', 'Belanja', 'Riwayat Stok', 'Kerusakan', 'Laporan'
+  'Inventaris', 'Belanja', 'Barang Keluar', 'Riwayat Stok', 'Kerusakan', 'Laporan'
 ];
 
 export default function PengaturanUserPage() {

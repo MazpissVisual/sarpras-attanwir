@@ -26,6 +26,7 @@ const REF_LABELS = {
   purchase: 'Pembelian',
   damage: 'Kerusakan',
   manual: 'Manual',
+  barang_keluar: 'Barang Keluar',
 };
 
 const ITEMS_PER_PAGE = 25;

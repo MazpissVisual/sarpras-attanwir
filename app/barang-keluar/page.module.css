@@ -1,0 +1,122 @@
+.formContainer {
+  background: white;
+  border-radius: var(--radius-lg);
+  padding: 32px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.formSection {
+  margin-bottom: 32px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.formSection:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.sectionTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-text);
+  margin-bottom: 20px;
+}
+
+.formRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.formGroup {
+  margin-bottom: 20px;
+}
+
+.required {
+  color: var(--color-danger);
+  margin-left: 4px;
+}
+
+.invalidInput {
+  border-color: var(--color-danger) !important;
+  background-color: #fef2f2 !important;
+}
+
+.invalidInput:focus {
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2) !important;
+}
+
+.errorText {
+  color: var(--color-danger);
+  font-size: 12px;
+  margin-top: 6px;
+  font-weight: 500;
+}
+
+.inputWithSuffix {
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+
+.inputWithSuffix input {
+  padding-right: 60px;
+}
+
+.suffix {
+  position: absolute;
+  right: 16px;
+  color: var(--color-text-muted);
+  font-size: 14px;
+  font-weight: 500;
+  background: transparent;
+  pointer-events: none;
+}
+
+.stockInfo {
+  margin-top: 12px;
+  background: var(--color-bg-subtle);
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border: 1px solid var(--color-border-light);
+}
+
+.infoLabel {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.infoValue {
+  font-size: 15px;
+  color: var(--color-text);
+}
+
+.infoValue strong {
+  color: var(--color-primary);
+  font-size: 18px;
+}
+
+.formActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+@media (max-width: 640px) {
+  .formRow {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+  
+  .formContainer {
+    padding: 20px;
+  }
+}
