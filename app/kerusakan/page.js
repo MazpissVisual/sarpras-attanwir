@@ -81,7 +81,7 @@ export default function KerusakanPage() {
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState(null);
-  const [activeTab, setActiveTab] = useState('action');
+  const [activeTab, setActiveTab] = useState('dilaporkan');
   const [search, setSearch] = useState('');
 
   // Modal & Files
@@ -126,16 +126,14 @@ export default function KerusakanPage() {
       const q = search.toLowerCase();
       res = res.filter(r => r.nama_barang.toLowerCase().includes(q) || r.nama_pelapor.toLowerCase().includes(q));
     }
-    if (activeTab === 'action') {
-      res = res.filter(r => r.status === 'dilaporkan' || r.status === 'diproses');
-    } else {
-      res = res.filter(r => r.status === 'selesai' || r.status === 'ditolak');
-    }
+    res = res.filter(r => r.status === activeTab);
     return res;
   }, [reports, search, activeTab]);
 
-  const actionCount = reports.filter(r => r.status === 'dilaporkan' || r.status === 'diproses').length;
-  const doneCount = reports.filter(r => r.status === 'selesai' || r.status === 'ditolak').length;
+  const countDilaporkan = reports.filter(r => r.status === 'dilaporkan').length;
+  const countDiproses = reports.filter(r => r.status === 'diproses').length;
+  const countSelesai = reports.filter(r => r.status === 'selesai').length;
+  const countDitolak = reports.filter(r => r.status === 'ditolak').length;
 
   // Handlers
   const handleAddPhotos = async (e) => {
@@ -281,11 +279,17 @@ export default function KerusakanPage() {
         <div className={styles.toolbar}>
           <div className={styles.searchAndTabs}>
             <div className={styles.tabs}>
-              <button className={`${styles.tab} ${activeTab === 'action' ? styles.tabActive : ''}`} onClick={() => setActiveTab('action')}>
-                Perlu Tindakan {actionCount > 0 && <span className={styles.badgeDanger}>{actionCount}</span>}
+              <button className={`${styles.tab} ${activeTab === 'dilaporkan' ? styles.tabActive : ''}`} onClick={() => setActiveTab('dilaporkan')}>
+                Dilaporkan {countDilaporkan > 0 && <span className={styles.badgeCountWarning}>{countDilaporkan}</span>}
               </button>
-              <button className={`${styles.tab} ${activeTab === 'done' ? styles.tabActive : ''}`} onClick={() => setActiveTab('done')}>
-                Selesai / Ditolak <span className={styles.badgeMuted}>{doneCount}</span>
+              <button className={`${styles.tab} ${activeTab === 'diproses' ? styles.tabActive : ''}`} onClick={() => setActiveTab('diproses')}>
+                Diproses {countDiproses > 0 && <span className={styles.badgeCountInfo}>{countDiproses}</span>}
+              </button>
+              <button className={`${styles.tab} ${activeTab === 'selesai' ? styles.tabActive : ''}`} onClick={() => setActiveTab('selesai')}>
+                Selesai {countSelesai > 0 && <span className={styles.badgeCountSuccess}>{countSelesai}</span>}
+              </button>
+              <button className={`${styles.tab} ${activeTab === 'ditolak' ? styles.tabActive : ''}`} onClick={() => setActiveTab('ditolak')}>
+                Ditolak {countDitolak > 0 && <span className={styles.badgeCountDanger}>{countDitolak}</span>}
               </button>
             </div>
             <div className={styles.searchBox}>
