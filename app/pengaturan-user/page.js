@@ -36,8 +36,11 @@ export default function PengaturanUserPage() {
 
   // Role Protection
   useEffect(() => {
+    if (authLoading) return;
+    if (!userProfile) return; // Prevent spurious error during logout
+    
     const isSuperAdmin = userProfile?.role && userProfile.role.toLowerCase().replace(/[\s_-]+/g, '') === 'superadmin';
-    if (!authLoading && !isSuperAdmin) {
+    if (!isSuperAdmin) {
       addToast('Akses ditolak: Hanya Super Admin yang dapat mengakses Management User.', 'error');
       router.push('/');
     }
