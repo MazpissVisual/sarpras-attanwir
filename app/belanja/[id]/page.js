@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase';
 import { useToast } from '@/components/Toast';
 import { AuthContext } from '@/components/AuthProvider';
 import { addPembayaran, uploadNota } from '@/lib/actions/belanjaActions';
+import { compressFileForUpload } from '@/lib/imageCompression';
 import styles from './page.module.css';
 
 export default function DetailBelanjaPage() {
@@ -82,16 +83,22 @@ export default function DetailBelanjaPage() {
     e.preventDefault();
     if (!uploadFile) return addToast('Pilih file terlebih dahulu', 'error');
     setUploading(true);
-    const fd = new FormData();
-    fd.append('file', uploadFile);
-    fd.append('belanja_id', id);
-    const res = await uploadNota(fd);
-    if (res.success) {
-      addToast('Nota berhasil diunggah!', 'success');
-      setUploadFile(null);
-      fetchDetail();
-    } else {
-      addToast(res.error || 'Gagal upload', 'error');
+    try {
+      // Compress image before upload (non-images like PDF are passed through)
+      const compressedFile = await compressFileForUpload(uploadFile, 300);
+      const fd = new FormData();
+      fd.append('file', compressedFile);
+      fd.append('belanja_id', id);
+      const res = await uploadNota(fd);
+      if (res.success) {
+        addToast('Nota berhasil diunggah!', 'success');
+        setUploadFile(null);
+        fetchDetail();
+      } else {
+        addToast(res.error || 'Gagal upload', 'error');
+      }
+    } catch (err) {
+      addToast('Gagal mengunggah: ' + (err.message || ''), 'error');
     }
     setUploading(false);
   };

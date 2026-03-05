@@ -100,6 +100,8 @@ export const AuthProvider = ({ children }) => {
             if (profile) {
               localStorage.setItem('profile_' + currentUser.id, JSON.stringify(profile));
               // Set Cookie for Next.js Middleware Route Protection
+              document.cookie = `sb-user-id=${currentUser.id}; path=/; max-age=${3600*24*7}`;
+              document.cookie = `sb-user-name=${encodeURIComponent(profile.full_name || currentUser.email.split('@')[0])}; path=/; max-age=${3600*24*7}`;
               document.cookie = `sb-user-role=${profile.role || ''}; path=/; max-age=${3600*24*7}`;
               document.cookie = `sb-access-rights=${JSON.stringify(profile.access_rights || [])}; path=/; max-age=${3600*24*7}`;
             }
@@ -110,6 +112,8 @@ export const AuthProvider = ({ children }) => {
         if (mounted) {
           setUserProfile(null);
           // Delete Cookies for Next.js Middleware
+          document.cookie = `sb-user-id=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+          document.cookie = `sb-user-name=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
           document.cookie = `sb-user-role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
           document.cookie = `sb-access-rights=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
           setLoading(false);

@@ -3,6 +3,8 @@
 import { createClient } from '@supabase/supabase-js';
 import { isServerAdmin } from '@/lib/serverAuth';
 
+import { logActivity } from '@/lib/activityLog';
+
 // Admin client requires SUPABASE_SERVICE_ROLE_KEY to bypass RLS when necessary
 const getAdminClient = () => {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -37,6 +39,14 @@ export async function submitBarangKeluarAction(payload) {
 
     const adminClient = getAdminClient();
 
+    // -- GET DATA SEBELUM --
+    const { data: itemData } = await adminClient
+      .from('inventory')
+      .select('nama_barang, stok_saat_ini, satuan')
+      .eq('id', barang_id)
+      .single();
+    // ----------------------
+
     // 2. Panggil RPC Transaction
     const { data: id, error } = await adminClient.rpc('proses_barang_keluar', {
       p_barang_id: barang_id,
@@ -52,6 +62,27 @@ export async function submitBarangKeluarAction(payload) {
       // Jika RPC gagal karena check 'Stok tidak mencukupi' atau semacamnya
       throw new Error(error.message);
     }
+
+    // --- ACTIVITY LOG ---
+    await logActivity({
+      aktivitas: 'barang_keluar',
+      modul: 'stok',
+      deskripsi: `Mengeluarkan ${qty} unit barang untuk ${tujuan} (Pj: ${penanggung_jawab})`,
+      dataSebelum: itemData ? {
+        nama_barang: itemData.nama_barang,
+        stok_awal: itemData.stok_saat_ini,
+        satuan: itemData.satuan
+      } : null,
+      dataSesudah: { 
+        barang_id, 
+        qty, 
+        stok_sisa: itemData ? (itemData.stok_saat_ini - qty) : null,
+        tujuan, 
+        penanggung_jawab, 
+        tanggal 
+      }
+    });
+    // --------------------
 
     return { success: true, id };
 

@@ -37,15 +37,18 @@ export default function LaporanPage() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const startDate = new Date(tahun, bulan, 1).toISOString();
-      const endDate = new Date(tahun, bulan + 1, 0, 23, 59, 59).toISOString();
+      // Use YYYY-MM-DD format to filter by tanggal (transaction date), not created_at
+      // This avoids timezone conversion issues with toISOString() (WIB = UTC+7)
+      const startDate = `${tahun}-${String(bulan + 1).padStart(2, '0')}-01`;
+      const lastDay = new Date(tahun, bulan + 1, 0).getDate();
+      const endDate = `${tahun}-${String(bulan + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
 
       const { data, error } = await supabase
         .from('transactions')
         .select('*')
-        .gte('created_at', startDate)
-        .lte('created_at', endDate)
-        .order('created_at', { ascending: false });
+        .gte('tanggal', startDate)
+        .lte('tanggal', endDate)
+        .order('tanggal', { ascending: false });
 
       if (error) throw error;
 

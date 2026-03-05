@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { AuthContext } from '@/components/AuthProvider';
 import { useToast } from '@/components/Toast';
 import { addPembayaranAction, deletePembayaranAction, uploadNotaAction, deleteNotaAction } from './actions';
+import { compressFileForUpload } from '@/lib/imageCompression';
 import styles from './page.module.css';
 
 // ==============================
@@ -98,16 +99,22 @@ export default function DetailClient({ initialData, id }) {
     e.preventDefault();
     if (!uploadFile) return addToast('Pilih file dahulu', 'error');
     setUploadLoading(true);
-    const fd = new FormData();
-    fd.append('file', uploadFile);
-    fd.append('transaksi_id', id);
-    const res = await uploadNotaAction(fd);
-    if (res.success) {
-      addToast('Nota berhasil diunggah!', 'success');
-      setUploadFile(null);
-      router.refresh();
-    } else {
-      addToast(res.error, 'error');
+    try {
+      // Compress image before upload (non-images like PDF are passed through)
+      const compressedFile = await compressFileForUpload(uploadFile, 300);
+      const fd = new FormData();
+      fd.append('file', compressedFile);
+      fd.append('transaksi_id', id);
+      const res = await uploadNotaAction(fd);
+      if (res.success) {
+        addToast('Nota berhasil diunggah!', 'success');
+        setUploadFile(null);
+        router.refresh();
+      } else {
+        addToast(res.error, 'error');
+      }
+    } catch (err) {
+      addToast('Gagal mengunggah: ' + (err.message || ''), 'error');
     }
     setUploadLoading(false);
   };

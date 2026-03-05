@@ -7,8 +7,8 @@ import { useToast } from '@/components/Toast';
 import { AuthContext } from '@/components/AuthProvider';
 import { getDashboardData } from '@/app/actions/dashboardActions';
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, Legend,
+  LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  PieChart, Pie, Cell,
 } from 'recharts';
 import styles from './page.module.css';
 
@@ -47,7 +47,7 @@ function KpiCard({ icon, label, value, sub, change, color = 'blue', href, loadin
   return href ? <Link href={href} style={{ textDecoration: 'none' }}>{content}</Link> : content;
 }
 
-// ─── Custom Tooltip Chart ───────────────────────────────────
+// ─── Custom Tooltips ────────────────────────────────────────
 function ChartTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
   return (
@@ -58,11 +58,20 @@ function ChartTooltip({ active, payload, label }) {
   );
 }
 
+function BarTooltip({ active, payload, label }) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className={styles.chartTooltip}>
+      <div className={styles.tooltipLabel}>{label}</div>
+      <div className={styles.tooltipValue}>{payload[0]?.value} item</div>
+    </div>
+  );
+}
+
 // ─── Alert Item ─────────────────────────────────────────────
 function AlertItem({ alert }) {
   const cls = { red: styles.alertRed, orange: styles.alertOrange, yellow: styles.alertYellow }[alert.level] || styles.alertYellow;
-  const tag = alert.href ? Link : 'div';
-  const Tag = tag;
+  const Tag = alert.href ? Link : 'div';
   return (
     <Tag href={alert.href || '#'} className={`${styles.alertItem} ${cls}`}>
       <span className={styles.alertIcon}>{alert.icon}</span>
@@ -97,6 +106,17 @@ function ActivityIcon({ type }) {
   );
 }
 
+// ─── Quick Action Button ────────────────────────────────────
+function QuickAction({ href, icon, label, color }) {
+  return (
+    <Link href={href} className={`${styles.quickAction} ${styles[`qa_${color}`]}`}>
+      <div className={styles.qaIcon}>{icon}</div>
+      <span className={styles.qaLabel}>{label}</span>
+    </Link>
+  );
+}
+
+
 // ─── MAIN COMPONENT ──────────────────────────────────────────
 export default function DashboardPage() {
   const { addToast } = useToast();
@@ -105,12 +125,22 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
+  const now = new Date();
+  const [bulan, setBulan] = useState(now.getMonth()); // 0-indexed
+  const [tahun, setTahun] = useState(now.getFullYear());
+
   const cleanRole = userProfile?.role?.toLowerCase().replace(/[\s_-]+/g, '') || '';
   const isAdmin = ['superadmin', 'admin'].includes(cleanRole);
 
+  // Generate year options (3 years back)
+  const yearOptions = [];
+  for (let y = now.getFullYear(); y >= now.getFullYear() - 3; y--) {
+    yearOptions.push(y);
+  }
+
   const fetchData = useCallback(async (showToast = false) => {
     try {
-      const result = await getDashboardData();
+      const result = await getDashboardData({ bulan, tahun });
       setData(result);
       if (showToast) addToast('Dashboard diperbarui!', 'success');
     } catch (err) {
@@ -119,9 +149,12 @@ export default function DashboardPage() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [addToast]);
+  }, [addToast, bulan, tahun]);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => {
+    setLoading(true);
+    fetchData();
+  }, [fetchData]);
 
   const handleRefresh = () => {
     setRefreshing(true);
@@ -129,13 +162,12 @@ export default function DashboardPage() {
   };
 
   const kpi = data?.kpi;
-  const now = new Date();
 
   return (
     <>
       <Header
         title="Dashboard"
-        subtitle={`${MONTHS_ID[now.getMonth()]} ${now.getFullYear()} — Ringkasan Sarpras Attanwir`}
+        subtitle={`${MONTHS_ID[bulan]} ${tahun} — Ringkasan Sarpras Attanwir`}
       />
       <div className={styles.dashboard}>
 
@@ -145,22 +177,77 @@ export default function DashboardPage() {
             Selamat datang, <strong>{userProfile?.full_name || userProfile?.email?.split('@')[0] || 'Admin'}</strong>
             <span className={styles.roleBadge}>{userProfile?.role?.replace('_', ' ') || 'Staff'}</span>
           </p>
-          <button
-            className={`${styles.refreshBtn} ${refreshing ? styles.spinning : ''}`}
-            onClick={handleRefresh}
-            disabled={refreshing}
-          >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="23 4 23 10 17 10"/>
-              <polyline points="1 20 1 14 7 14"/>
-              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
-            </svg>
-            {refreshing ? 'Memuat...' : 'Refresh'}
-          </button>
+          <div className={styles.topBarRight}>
+            {/* Month/Year Filter */}
+            <div className={styles.filterGroup}>
+              <select
+                className={styles.filterSelect}
+                value={bulan}
+                onChange={(e) => setBulan(Number(e.target.value))}
+              >
+                {MONTHS_ID.map((m, i) => (
+                  <option key={i} value={i}>{m}</option>
+                ))}
+              </select>
+              <select
+                className={styles.filterSelect}
+                value={tahun}
+                onChange={(e) => setTahun(Number(e.target.value))}
+              >
+                {yearOptions.map(y => (
+                  <option key={y} value={y}>{y}</option>
+                ))}
+              </select>
+            </div>
+            <button
+              className={`${styles.refreshBtn} ${refreshing ? styles.spinning : ''}`}
+              onClick={handleRefresh}
+              disabled={refreshing}
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="23 4 23 10 17 10"/>
+                <polyline points="1 20 1 14 7 14"/>
+                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+              </svg>
+              {refreshing ? 'Memuat...' : 'Refresh'}
+            </button>
+          </div>
         </div>
 
         {/* ══════════════════════════════════════
-            SECTION 1 — KPI CARDS (6 kartu)
+            QUICK ACTIONS
+        ══════════════════════════════════════ */}
+        {isAdmin && (
+          <div className={styles.quickActions}>
+            <QuickAction
+              href="/belanja/baru"
+              color="blue"
+              icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>}
+              label="Tambah Belanja"
+            />
+            <QuickAction
+              href="/barang-keluar"
+              color="orange"
+              icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>}
+              label="Barang Keluar"
+            />
+            <QuickAction
+              href="/inventaris"
+              color="indigo"
+              icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>}
+              label="Tambah Inventaris"
+            />
+            <QuickAction
+              href="/kerusakan"
+              color="red"
+              icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>}
+              label="Lapor Kerusakan"
+            />
+          </div>
+        )}
+
+        {/* ══════════════════════════════════════
+            SECTION 1 — KPI CARDS (8 kartu)
         ══════════════════════════════════════ */}
         <div className={styles.kpiGrid}>
           <KpiCard
@@ -174,7 +261,26 @@ export default function DashboardPage() {
             loading={loading}
           />
           <KpiCard
-            icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><path d="M12 22V7M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>}
+            icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>}
+            label="Barang Keluar Bulan Ini"
+            value={`${kpi?.jumlahBarangKeluarIni ?? 0} item`}
+            sub="Total unit yang dikeluarkan"
+            color="orange"
+            href="/barang-keluar"
+            loading={loading}
+          />
+
+          <KpiCard
+            icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>}
+            label="Barang Rusak Bulan Ini"
+            value={kpi?.jumlahBarangRusakIni ?? 0}
+            sub="Laporan kerusakan"
+            color="red"
+            href="/kerusakan"
+            loading={loading}
+          />
+          <KpiCard
+            icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/></svg>}
             label="Total Dibayar Bulan Ini"
             value={rpCompact(kpi?.totalDibayarIni)}
             sub={rp(kpi?.totalDibayarIni)}
@@ -183,12 +289,12 @@ export default function DashboardPage() {
             loading={loading}
           />
           <KpiCard
-            icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>}
-            label="Total Utang Aktif"
-            value={rpCompact(kpi?.totalUtangAktif)}
-            sub={rp(kpi?.totalUtangAktif)}
+            icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>}
+            label="Tagihan Jatuh Tempo"
+            value={kpi?.jumlahTagihanJatuhTempo ?? 0}
+            sub={kpi?.totalTagihanJatuhTempo ? rp(kpi.totalTagihanJatuhTempo) : 'Tidak ada tagihan'}
             color="red"
-            href={isAdmin ? '/laporan' : null}
+            href="/laporan"
             loading={loading}
           />
           <KpiCard
@@ -202,34 +308,25 @@ export default function DashboardPage() {
             loading={loading}
           />
           <KpiCard
-            icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>}
-            label="Total Barang Inventaris"
-            value={kpi?.totalBarang ?? '—'}
-            sub="Jenis barang terdaftar"
-            color="indigo"
-            href={isAdmin ? '/inventaris' : null}
-            loading={loading}
-          />
-          <KpiCard
             icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>}
-            label="Stok Hampir Habis"
+            label="Kondisi Stok (Keseluruhan)"
             value={kpi?.stokKritisCount ?? '—'}
-            sub={kpi?.stokHabisCount ? `${kpi.stokHabisCount} item stok = 0` : 'Semua stok baik'}
+            sub={kpi?.stokHabisCount > 0 ? `${kpi.stokHabisCount} item stok habis (0)` : 'Tidak ada stok habis'}
             color="orange"
-            href={isAdmin ? '/inventaris' : null}
+            href="/inventaris"
             loading={loading}
           />
         </div>
 
         {/* ══════════════════════════════════════
-            SECTION 2 & 3 — CHART ROW
+            SECTION 2 — CHART ROW (Tren Belanja + Status Pembayaran)
         ══════════════════════════════════════ */}
         <div className={styles.chartRow}>
           {/* LINE CHART — Tren Belanja */}
           <div className={styles.chartCard}>
             <div className={styles.chartHead}>
               <h3>📈 Tren Belanja 12 Bulan</h3>
-              <span className={styles.chartSub}>Total per bulan</span>
+              <span className={styles.chartSub}>Total pengeluaran per bulan</span>
             </div>
             {loading ? (
               <div className={styles.chartLoading}><div className={styles.spinner} /></div>
@@ -295,7 +392,74 @@ export default function DashboardPage() {
         </div>
 
         {/* ══════════════════════════════════════
-            SECTION 6 — ALERT SISTEM
+            SECTION 3 — CHART ROW (Kategori + Barang Keluar)
+        ══════════════════════════════════════ */}
+        <div className={styles.chartRow}>
+          {/* PIE — Pengeluaran per Kategori */}
+          <div className={styles.chartCard}>
+            <div className={styles.chartHead}>
+              <h3>🏷️ Pengeluaran per Kategori</h3>
+              <span className={styles.chartSub}>Bulan ini</span>
+            </div>
+            {loading ? (
+              <div className={styles.chartLoading}><div className={styles.spinner} /></div>
+            ) : (data?.categoryData || []).length === 0 ? (
+              <div className={styles.emptyState}><p>Belum ada data kategori bulan ini</p></div>
+            ) : (
+              <div className={styles.categoryWrap}>
+                <ResponsiveContainer width="100%" height={200}>
+                  <PieChart>
+                    <Pie
+                      data={data.categoryData}
+                      cx="50%" cy="50%"
+                      outerRadius={80}
+                      paddingAngle={2}
+                      dataKey="value"
+                    >
+                      {data.categoryData.map((entry, i) => (
+                        <Cell key={i} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(v) => [rp(v), 'Total']} />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className={styles.categoryLegend}>
+                  {data.categoryData.map((d, i) => (
+                    <div key={i} className={styles.legendItem}>
+                      <span className={styles.legendDot} style={{ background: d.color }} />
+                      <span className={styles.legendName}>{d.name}</span>
+                      <span className={styles.legendVal}>{rpCompact(d.value)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* BAR CHART — Barang Keluar per Bulan */}
+          <div className={styles.chartCard}>
+            <div className={styles.chartHead}>
+              <h3>📦 Barang Keluar per Bulan</h3>
+              <span className={styles.chartSub}>12 bulan terakhir</span>
+            </div>
+            {loading ? (
+              <div className={styles.chartLoading}><div className={styles.spinner} /></div>
+            ) : (
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart data={data?.keluarTrendData || []} margin={{ top: 5, right: 16, left: 0, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
+                  <XAxis dataKey="bulan" tick={{ fontSize: 11, fill: 'var(--color-text-muted)' }} />
+                  <YAxis tick={{ fontSize: 11, fill: 'var(--color-text-muted)' }} width={40} />
+                  <Tooltip content={<BarTooltip />} />
+                  <Bar dataKey="total" fill="#ea580c" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+        </div>
+
+        {/* ══════════════════════════════════════
+            SECTION 4 — ALERT SISTEM
         ══════════════════════════════════════ */}
         <div className={styles.sectionCard}>
           <div className={styles.sectionHead}>
@@ -318,7 +482,80 @@ export default function DashboardPage() {
         </div>
 
         {/* ══════════════════════════════════════
-            SECTION 4 & 5 — BOTTOM ROW
+            SECTION 5 — MONITORING ROW
+        ══════════════════════════════════════ */}
+        <div className={styles.bottomRow}>
+          {/* TAGIHAN JATUH TEMPO */}
+          <div className={styles.tableCard}>
+            <div className={styles.tableHead}>
+              <h3>⏰ Tagihan Akan Jatuh Tempo</h3>
+              <Link href="/laporan" className={styles.viewAll}>Lihat Semua →</Link>
+            </div>
+            {loading ? (
+              <div className={styles.chartLoading}><div className={styles.spinner} /></div>
+            ) : (data?.upcomingDue || []).length === 0 ? (
+              <div className={styles.emptyState}>
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" strokeWidth="1.5"><polyline points="20 6 9 17 4 12"/></svg>
+                <p>Tidak ada tagihan jatuh tempo</p>
+              </div>
+            ) : (
+              <div className={styles.dueList}>
+                {data.upcomingDue.map((due) => (
+                  <Link key={due.id} href={`/laporan/${due.id}`} className={styles.dueItem}>
+                    <div className={styles.dueInfo}>
+                      <strong>{due.judul}</strong>
+                      <span>{due.toko} • {formatDate(due.tanggal)}</span>
+                    </div>
+                    <div className={styles.dueRight}>
+                      <span className={styles.dueSisa}>{rp(due.sisa)}</span>
+                      <span className={`${styles.dueDays} ${due.hari > 30 ? styles.dueOverdue : ''}`}>
+                        {due.hari > 0 ? `${due.hari} hari lalu` : 'Hari ini'}
+                      </span>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* BARANG PALING SERING KELUAR */}
+          <div className={styles.tableCard}>
+            <div className={styles.tableHead}>
+              <h3>🔥 Barang Paling Sering Keluar</h3>
+              <Link href="/barang-keluar" className={styles.viewAll}>Lihat Semua →</Link>
+            </div>
+            {loading ? (
+              <div className={styles.chartLoading}><div className={styles.spinner} /></div>
+            ) : (data?.topBarangKeluar || []).length === 0 ? (
+              <div className={styles.emptyState}>
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" strokeWidth="1.5"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+                <p>Belum ada data barang keluar</p>
+              </div>
+            ) : (
+              <div className={styles.topList}>
+                {data.topBarangKeluar.map((item, idx) => {
+                  const maxJumlah = data.topBarangKeluar[0]?.jumlah || 1;
+                  const pct = (item.jumlah / maxJumlah * 100).toFixed(0);
+                  return (
+                    <div key={idx} className={styles.topItem}>
+                      <div className={styles.topRank}>{idx + 1}</div>
+                      <div className={styles.topInfo}>
+                        <span className={styles.topName}>{item.nama}</span>
+                        <div className={styles.topBarWrap}>
+                          <div className={styles.progressIndicator} style={{ width: `${pct}%` }} />
+                        </div>
+                      </div>
+                      <span className={styles.topCount}>{item.jumlah}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ══════════════════════════════════════
+            SECTION 6 — BOTTOM ROW (Stok Kritis + Aktivitas)
         ══════════════════════════════════════ */}
         <div className={styles.bottomRow}>
           {/* STOK KRITIS */}

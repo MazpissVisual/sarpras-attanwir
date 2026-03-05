@@ -11,24 +11,31 @@ const getAdminClient = () => {
 
 /**
  * Fetch semua data dashboard dalam 1 batch (parallel queries, no N+1)
+ * @param {Object} opts - Optional { bulan (0-indexed), tahun }
  */
-export async function getDashboardData() {
+export async function getDashboardData(opts = {}) {
   const admin = getAdminClient();
   const now = new Date();
-  const currentYear = now.getFullYear();
-  const currentMonth = now.getMonth(); // 0-indexed
+  const currentMonth = opts.bulan ?? now.getMonth(); // 0-indexed
+  const currentYear = opts.tahun ?? now.getFullYear();
 
-  const firstDayThisMonth = new Date(currentYear, currentMonth, 1).toISOString();
-  const lastDayThisMonth = new Date(currentYear, currentMonth + 1, 0, 23, 59, 59).toISOString();
+  // Date ranges using YYYY-MM-DD to avoid timezone issues
+  const startThisMonth = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-01`;
+  const lastDayThis = new Date(currentYear, currentMonth + 1, 0).getDate();
+  const endThisMonth = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(lastDayThis).padStart(2, '0')}`;
 
-  const firstDayLastMonth = new Date(currentYear, currentMonth - 1, 1).toISOString();
-  const lastDayLastMonth = new Date(currentYear, currentMonth, 0, 23, 59, 59).toISOString();
+  const prevMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+  const prevYear = currentMonth === 0 ? currentYear - 1 : currentYear;
+  const startLastMonth = `${prevYear}-${String(prevMonth + 1).padStart(2, '0')}-01`;
+  const lastDayLast = new Date(prevYear, prevMonth + 1, 0).getDate();
+  const endLastMonth = `${prevYear}-${String(prevMonth + 1).padStart(2, '0')}-${String(lastDayLast).padStart(2, '0')}`;
 
-  // 12 bulan ke belakang untuk trend
-  const twelveMonthsAgo = new Date(currentYear, currentMonth - 11, 1).toISOString();
+  // 12 months ago for trend
+  const trendStart = new Date(currentYear, currentMonth - 11, 1);
+  const trendStartStr = `${trendStart.getFullYear()}-${String(trendStart.getMonth() + 1).padStart(2, '0')}-01`;
 
   // =============================================
-  // PARALLEL QUERIES — semua dijalankan bersamaan
+  // PARALLEL QUERIES
   // =============================================
   const [
     txThisMonthRes,
@@ -37,78 +44,103 @@ export async function getDashboardData() {
     txTrendRes,
     txStatusRes,
     inventoryRes,
-    belanjaKeluarRes,
+    barangKeluarThisMonthRes,
+    barangKeluarTrendRes,
+    barangKeluarAllRes,
     pembayaranRecentRes,
     recentTxRes,
+    damageThisMonthRes,
   ] = await Promise.all([
 
-    // 1. Transaksi bulan ini
+    // 1. Transaksi bulan ini (bulan terpilih)
     admin.from('transactions')
-      .select('total_bayar, total_dibayar, sisa_tagihan, status_lunas, metode_bayar')
-      .gte('created_at', firstDayThisMonth)
-      .lte('created_at', lastDayThisMonth),
+      .select('total_bayar, total_dibayar, sisa_tagihan, status_lunas, metode_bayar, kategori')
+      .gte('tanggal', startThisMonth)
+      .lte('tanggal', endThisMonth),
 
-    // 2. Transaksi bulan lalu (untuk perbandingan)
+    // 2. Transaksi bulan lalu
     admin.from('transactions')
       .select('total_bayar, total_dibayar')
-      .gte('created_at', firstDayLastMonth)
-      .lte('created_at', lastDayLastMonth),
+      .gte('tanggal', startLastMonth)
+      .lte('tanggal', endLastMonth),
 
-    // 3. Semua transaksi belum lunas (untuk total utang aktif)
+    // 3. Semua transaksi belum lunas
     admin.from('transactions')
-      .select('total_bayar, sisa_tagihan')
+      .select('id, judul, toko, total_bayar, sisa_tagihan, tanggal, created_at')
       .eq('status_lunas', false),
 
-    // 4. Trend 12 bulan (total_bayar per bulan)
+    // 4. Trend 12 bulan
     admin.from('transactions')
-      .select('total_bayar, created_at')
-      .gte('created_at', twelveMonthsAgo)
-      .order('created_at', { ascending: true }),
+      .select('total_bayar, tanggal')
+      .gte('tanggal', trendStartStr)
+      .order('tanggal', { ascending: true }),
 
-    // 5. Status pembayaran (count lunas/dp/utang)
+    // 5. Status pembayaran
     admin.from('transactions')
       .select('status_lunas, metode_bayar, sisa_tagihan, total_bayar'),
 
-    // 6. Inventaris (stok) — tanpa minimum_stok (kolom tidak ada di DB)
+    // 6. Inventaris
     admin.from('inventory')
       .select('id, nama_barang, stok_saat_ini, satuan')
       .order('stok_saat_ini', { ascending: true })
-      .limit(200),
+      .limit(1000),
 
-    // 7. Barang keluar terbaru
+    // 7. Barang keluar bulan ini — JOIN inventory via barang_id
     admin.from('barang_keluar')
-      .select('id, nama_barang, jumlah, keperluan, penanggung_jawab, tanggal, created_at')
-      .order('created_at', { ascending: false })
-      .limit(5),
+      .select('id, barang_id, qty, tujuan, penanggung_jawab, tanggal, created_at, inventory:barang_id(nama_barang)')
+      .gte('tanggal', startThisMonth)
+      .lte('tanggal', endThisMonth),
 
-    // 8. Pembayaran terbaru
+    // 8. Barang keluar trend 12 bulan
+    admin.from('barang_keluar')
+      .select('id, qty, tanggal')
+      .gte('tanggal', trendStartStr)
+      .order('tanggal', { ascending: true }),
+
+    // 9. Barang keluar — semua (untuk top items) — JOIN inventory
+    admin.from('barang_keluar')
+      .select('qty, tujuan, inventory:barang_id(nama_barang)')
+      .order('created_at', { ascending: false })
+      .limit(500),
+
+    // 10. Pembayaran terbaru
     admin.from('pembayaran_transaksi')
       .select('id, jumlah_bayar, tanggal, metode, created_at, transaction_id')
       .order('created_at', { ascending: false })
       .limit(5),
 
-    // 9. Transaksi terbaru
+    // 11. Transaksi terbaru
     admin.from('transactions')
-      .select('id, judul, toko, total_bayar, metode_bayar, status_lunas, created_at')
+      .select('id, judul, toko, total_bayar, metode_bayar, status_lunas, tanggal, created_at')
       .order('created_at', { ascending: false })
       .limit(10),
+
+    // 12. Damage reports bulan ini
+    admin.from('damage_reports')
+      .select('id, nama_barang, status, created_at')
+      .gte('created_at', new Date(currentYear, currentMonth, 1).toISOString())
+      .lte('created_at', new Date(currentYear, currentMonth + 1, 0, 23, 59, 59).toISOString()),
   ]);
 
-  // Log errors jika ada query yang gagal
-  const queryErrors = [
+  // Log errors
+  const queries = [
     { name: 'txThisMonth', res: txThisMonthRes },
     { name: 'txLastMonth', res: txLastMonthRes },
     { name: 'txAllUnpaid', res: txAllUnpaidRes },
-    { name: 'txTrend',     res: txTrendRes },
-    { name: 'txStatus',    res: txStatusRes },
-    { name: 'inventory',   res: inventoryRes },
-    { name: 'barangKeluar',res: belanjaKeluarRes },
-    { name: 'pembayaran',  res: pembayaranRecentRes },
-    { name: 'recentTx',   res: recentTxRes },
+    { name: 'txTrend', res: txTrendRes },
+    { name: 'txStatus', res: txStatusRes },
+    { name: 'inventory', res: inventoryRes },
+    { name: 'barangKeluarThisMonth', res: barangKeluarThisMonthRes },
+    { name: 'barangKeluarTrend', res: barangKeluarTrendRes },
+    { name: 'barangKeluarAll', res: barangKeluarAllRes },
+    { name: 'pembayaran', res: pembayaranRecentRes },
+    { name: 'recentTx', res: recentTxRes },
+    { name: 'damageThisMonth', res: damageThisMonthRes },
   ];
-  queryErrors.forEach(({ name, res }) => {
+  queries.forEach(({ name, res }) => {
     if (res.error) console.error(`[Dashboard] Query '${name}' error:`, res.error.message);
   });
+
   // =============================================
   // KPI CARDS
   // =============================================
@@ -140,37 +172,98 @@ export async function getDashboardData() {
   // =============================================
   const inventory = inventoryRes.data || [];
   const totalBarang = inventory.length;
-
-  // Treshold stok kritis: stok < 5
   const MIN_STOK = 5;
-  const stokKritis = inventory
-    .filter(i => i.stok_saat_ini < MIN_STOK)
-    .slice(0, 5);
+  const stokKritis = inventory.filter(i => i.stok_saat_ini < MIN_STOK).slice(0, 5);
   const stokKritisCount = inventory.filter(i => i.stok_saat_ini < MIN_STOK).length;
   const stokHabisCount = inventory.filter(i => i.stok_saat_ini === 0).length;
 
+
+
   // =============================================
-  // TREND CHART: total per bulan (12 bulan terakhir)
+  // BARANG KELUAR BULAN INI (fix: use qty instead of jumlah)
+  // =============================================
+  const barangKeluarThisMonth = barangKeluarThisMonthRes.data || [];
+  const jumlahBarangKeluarIni = barangKeluarThisMonth.reduce((s, k) => s + Number(k.qty || 0), 0);
+
+  // =============================================
+  // DAMAGE REPORTS BULAN INI
+  // =============================================
+  const damageThisMonth = damageThisMonthRes.data || [];
+  const jumlahBarangRusakIni = damageThisMonth.length;
+
+  // =============================================
+  // TAGIHAN JATUH TEMPO (unpaid > 30 hari dari tanggal yg dipilih)
+  // =============================================
+  const referenceDate = new Date(currentYear, currentMonth + 1, 0); // end of selected month
+  const thirtyDaysBefore = new Date(referenceDate);
+  thirtyDaysBefore.setDate(thirtyDaysBefore.getDate() - 30);
+  const overdueTransactions = txUnpaid.filter(t => {
+    const txDate = new Date(t.tanggal || t.created_at);
+    return txDate < thirtyDaysBefore;
+  });
+  const jumlahTagihanJatuhTempo = overdueTransactions.length;
+  const totalTagihanJatuhTempo = overdueTransactions.reduce((s, t) => {
+    return s + Number(t.sisa_tagihan ?? t.total_bayar ?? 0);
+  }, 0);
+
+  // =============================================
+  // TREND CHART (12 bulan relative to selected month)
   // =============================================
   const MONTHS_ID = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
   const trendMap = {};
-
-  // Seed semua 12 bulan dengan 0
   for (let i = 11; i >= 0; i--) {
     const d = new Date(currentYear, currentMonth - i, 1);
     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
     trendMap[key] = { bulan: MONTHS_ID[d.getMonth()], total: 0, tahun: d.getFullYear() };
   }
-
   (txTrendRes.data || []).forEach(tx => {
-    const d = new Date(tx.created_at);
+    const d = new Date(tx.tanggal);
     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-    if (trendMap[key]) {
-      trendMap[key].total += Number(tx.total_bayar || 0);
-    }
+    if (trendMap[key]) trendMap[key].total += Number(tx.total_bayar || 0);
   });
-
   const trendData = Object.values(trendMap);
+
+  // =============================================
+  // BARANG KELUAR TREND (12 bulan, use qty)
+  // =============================================
+  const keluarTrendMap = {};
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date(currentYear, currentMonth - i, 1);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    keluarTrendMap[key] = { bulan: MONTHS_ID[d.getMonth()], total: 0 };
+  }
+  (barangKeluarTrendRes.data || []).forEach(k => {
+    const d = new Date(k.tanggal);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    if (keluarTrendMap[key]) keluarTrendMap[key].total += Number(k.qty || 1);
+  });
+  const keluarTrendData = Object.values(keluarTrendMap);
+
+  // =============================================
+  // KATEGORI BELANJA (Pie Chart)
+  // =============================================
+  const categoryMap = {};
+  const CATEGORY_COLORS = {
+    listrik: '#3b82f6',
+    bangunan: '#f59e0b',
+    atk: '#10b981',
+    kebersihan: '#06b6d4',
+    elektronik: '#8b5cf6',
+    furniture: '#ec4899',
+    lainnya: '#6b7280',
+  };
+  txThisMonth.forEach(tx => {
+    const cat = tx.kategori || 'lainnya';
+    if (!categoryMap[cat]) categoryMap[cat] = 0;
+    categoryMap[cat] += Number(tx.total_bayar || 0);
+  });
+  const categoryData = Object.entries(categoryMap)
+    .map(([name, value]) => ({
+      name: name.charAt(0).toUpperCase() + name.slice(1),
+      value,
+      color: CATEGORY_COLORS[name] || '#6b7280',
+    }))
+    .sort((a, b) => b.value - a.value);
 
   // =============================================
   // STATUS PEMBAYARAN (Donut)
@@ -193,7 +286,37 @@ export async function getDashboardData() {
   ];
 
   // =============================================
-  // AKTIVITAS TERBARU (merge 3 sumber)
+  // BARANG PALING SERING KELUAR (Top 5, fix: use inventory.nama_barang)
+  // =============================================
+  const topKeluarMap = {};
+  (barangKeluarAllRes.data || []).forEach(k => {
+    const name = k.inventory?.nama_barang || 'Unknown';
+    if (!topKeluarMap[name]) topKeluarMap[name] = 0;
+    topKeluarMap[name] += Number(k.qty || 1);
+  });
+  const topBarangKeluar = Object.entries(topKeluarMap)
+    .map(([nama, jumlah]) => ({ nama, jumlah }))
+    .sort((a, b) => b.jumlah - a.jumlah)
+    .slice(0, 5);
+
+  // =============================================
+  // TAGIHAN YANG AKAN JATUH TEMPO
+  // =============================================
+  const upcomingDue = txUnpaid
+    .map(t => ({
+      id: t.id,
+      judul: t.judul,
+      toko: t.toko,
+      total: Number(t.total_bayar || 0),
+      sisa: Number(t.sisa_tagihan ?? t.total_bayar ?? 0),
+      tanggal: t.tanggal || t.created_at,
+      hari: Math.floor((referenceDate - new Date(t.tanggal || t.created_at)) / (1000 * 60 * 60 * 24)),
+    }))
+    .sort((a, b) => b.hari - a.hari)
+    .slice(0, 5);
+
+  // =============================================
+  // AKTIVITAS TERBARU
   // =============================================
   const activities = [];
 
@@ -221,21 +344,21 @@ export async function getDashboardData() {
     });
   });
 
-  (belanjaKeluarRes.data || []).forEach(k => {
+  (barangKeluarThisMonth || []).slice(0, 5).forEach(k => {
+    const namaBarang = k.inventory?.nama_barang || 'Barang';
     activities.push({
       id: `out-${k.id}`,
       type: 'keluar',
-      label: `Keluar: ${k.nama_barang}`,
-      sub: k.keperluan || k.penanggung_jawab || '',
+      label: `Keluar: ${namaBarang}`,
+      sub: k.tujuan || k.penanggung_jawab || '',
       nominal: null,
       date: k.created_at,
       href: '/barang-keluar',
     });
   });
 
-  // Sort by date descending, ambil 5 terbaru
   activities.sort((a, b) => new Date(b.date) - new Date(a.date));
-  const recentActivities = activities.slice(0, 5);
+  const recentActivities = activities.slice(0, 8);
 
   // =============================================
   // ALERT SISTEM
@@ -243,16 +366,7 @@ export async function getDashboardData() {
   const alerts = [];
 
   // Alert: Utang > 30 hari
-  const thirtyDaysAgo = new Date();
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-  // Semua belum lunas > 30 hari
-  const allOverdueRes = await admin.from('transactions')
-    .select('id, judul, total_bayar, sisa_tagihan, created_at')
-    .eq('status_lunas', false)
-    .lt('created_at', thirtyDaysAgo.toISOString());
-
-  (allOverdueRes.data || []).forEach(tx => {
+  overdueTransactions.forEach(tx => {
     alerts.push({
       level: 'red',
       icon: '⏰',
@@ -273,8 +387,8 @@ export async function getDashboardData() {
     });
   });
 
-  // Alert: Stok kritis (bukan 0, tapi rendah)
-  inventory.filter(i => i.stok_saat_ini > 0 && i.stok_saat_ini <= (i.minimum_stok ?? MIN_STOK)).slice(0, 3).forEach(item => {
+  // Alert: Stok kritis
+  inventory.filter(i => i.stok_saat_ini > 0 && i.stok_saat_ini < MIN_STOK).slice(0, 3).forEach(item => {
     alerts.push({
       level: 'yellow',
       icon: '⚠️',
@@ -284,17 +398,28 @@ export async function getDashboardData() {
     });
   });
 
-  // Alert: Utang besar (sisa > 1 juta)
-  txUnpaid.filter(t => {
-    const sisa = (t.sisa_tagihan ?? t.total_bayar) ?? 0;
-    return Number(sisa) > 1_000_000;
-  }).length > 0 && alerts.push({
-    level: 'orange',
-    icon: '💸',
-    title: `Ada ${txUnpaid.filter(t => Number((t.sisa_tagihan ?? t.total_bayar) ?? 0) > 1_000_000).length} tagihan besar belum lunas`,
-    desc: `Total sisa: Rp ${totalUtangAktif.toLocaleString('id-ID')}`,
-    href: '/laporan',
-  });
+  // Alert: Utang besar
+  const bigDebt = txUnpaid.filter(t => Number((t.sisa_tagihan ?? t.total_bayar) ?? 0) > 1_000_000);
+  if (bigDebt.length > 0) {
+    alerts.push({
+      level: 'orange',
+      icon: '💸',
+      title: `Ada ${bigDebt.length} tagihan besar belum lunas`,
+      desc: `Total sisa: Rp ${totalUtangAktif.toLocaleString('id-ID')}`,
+      href: '/laporan',
+    });
+  }
+
+  // Alert: Barang rusak baru
+  if (jumlahBarangRusakIni > 0) {
+    alerts.push({
+      level: 'orange',
+      icon: '🔧',
+      title: `${jumlahBarangRusakIni} laporan kerusakan bulan ini`,
+      desc: 'Periksa status perbaikan',
+      href: '/kerusakan',
+    });
+  }
 
   return {
     kpi: {
@@ -309,13 +434,22 @@ export async function getDashboardData() {
       totalBarang,
       stokKritisCount,
       stokHabisCount,
+      jumlahBarangKeluarIni,
+
+      jumlahBarangRusakIni,
+      jumlahTagihanJatuhTempo,
+      totalTagihanJatuhTempo,
     },
     trendData,
+    keluarTrendData,
+    categoryData,
     donutData,
     stokKritis,
+    topBarangKeluar,
+    upcomingDue,
     recentActivities,
     alerts,
-    currentMonth,
-    currentYear,
+    selectedMonth: currentMonth,
+    selectedYear: currentYear,
   };
 }

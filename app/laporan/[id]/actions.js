@@ -213,7 +213,7 @@ export async function uploadNotaAction(formData) {
     const transaksi_id = formData.get('transaksi_id');
 
     if (!file || !transaksi_id) return { success: false, error: 'File dan ID diperlukan.' };
-    if (file.size > 5 * 1024 * 1024) return { success: false, error: 'Ukuran file melebihi 5MB.' };
+    if (file.size > 10 * 1024 * 1024) return { success: false, error: 'Ukuran file melebihi 10MB.' };
 
     const allowed = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
     if (!allowed.includes(file.type)) return { success: false, error: 'Hanya JPG, PNG, WebP, atau PDF.' };

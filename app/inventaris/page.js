@@ -6,6 +6,7 @@ import { useToast } from '@/components/Toast';
 import { AuthContext } from '@/components/AuthProvider';
 import { supabase } from '@/lib/supabase';
 import { adjustStockManual } from '@/lib/stockService';
+import { logActivity } from '@/lib/activityLog';
 import styles from './page.module.css';
 
 const KATEGORI_OPTIONS = [
@@ -128,6 +129,18 @@ export default function InventarisPage() {
 
       if (error) throw error;
 
+      // --- ACTIVITY LOG ---
+      logActivity({
+        aktivitas: 'tambah',
+        modul: 'barang',
+        deskripsi: `Menambahkan barang "${data.nama_barang}"`,
+        dataSesudah: data,
+        userId: userProfile?.id,
+        namaUser: userProfile?.full_name || userProfile?.email,
+        roleUser: userProfile?.role,
+      });
+      // --------------------
+
       setItems((prev) => [...prev, data].sort((a, b) => a.nama_barang.localeCompare(b.nama_barang)));
       closeModal();
       addToast(`"${data.nama_barang}" berhasil ditambahkan ke inventaris`, 'success');
@@ -160,6 +173,19 @@ export default function InventarisPage() {
 
       if (error) throw error;
 
+      // --- ACTIVITY LOG ---
+      logActivity({
+        aktivitas: 'edit',
+        modul: 'barang',
+        deskripsi: `Memperbarui data barang "${data.nama_barang}"`,
+        dataSebelum: editingItem,
+        dataSesudah: data,
+        userId: userProfile?.id,
+        namaUser: userProfile?.full_name || userProfile?.email,
+        roleUser: userProfile?.role,
+      });
+      // --------------------
+
       setItems((prev) => prev.map((i) => (i.id === editingItem.id ? data : i)));
       closeModal();
       addToast('Data barang berhasil diperbarui', 'success');
@@ -190,6 +216,17 @@ export default function InventarisPage() {
 
       if (!result.success) throw new Error(result.error);
 
+      // --- ACTIVITY LOG ---
+      logActivity({
+        aktivitas: 'penyesuaian_stok',
+        modul: 'stok',
+        deskripsi: `Penyesuaian stok "${stockItem.nama_barang}" ${stockChange > 0 ? '+' : ''}${stockChange}. Stok: ${stockItem.stok_saat_ini} → ${result.newStock}`,
+        userId: userProfile?.id,
+        namaUser: userProfile?.full_name || userProfile?.email,
+        roleUser: userProfile?.role,
+      });
+      // --------------------
+
       setItems((prev) =>
         prev.map((i) => (i.id === stockItem.id ? { ...i, stok_saat_ini: result.newStock } : i))
       );
@@ -211,6 +248,18 @@ export default function InventarisPage() {
     try {
       const { error } = await supabase.from('inventory').delete().eq('id', item.id);
       if (error) throw error;
+
+      // --- ACTIVITY LOG ---
+      logActivity({
+        aktivitas: 'hapus',
+        modul: 'barang',
+        deskripsi: `Menghapus barang "${item.nama_barang}" dari sistem`,
+        dataSebelum: item,
+        userId: userProfile?.id,
+        namaUser: userProfile?.full_name || userProfile?.email,
+        roleUser: userProfile?.role,
+      });
+      // --------------------
 
       setItems((prev) => prev.filter((i) => i.id !== item.id));
       addToast(`"${item.nama_barang}" berhasil dihapus`, 'success');

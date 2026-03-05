@@ -209,21 +209,36 @@ export default function Sidebar() {
             {userProfile?.role && userProfile.role.toLowerCase().replace(/[\s_-]+/g, '') === 'superadmin' && (
               <li key="/pengaturan-user" style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--color-border)' }}>
                 <p className={styles.navLabel} style={{ marginBottom: '8px', paddingLeft: '4px', fontSize: '11px', fontWeight: 700, color: 'var(--color-text-muted)' }}>ADMIN</p>
-                <Link
-                  href="/pengaturan-user"
-                  className={`${styles.menuItem} ${pathname.startsWith('/pengaturan-user') ? styles.active : ''}`}
-                  onClick={() => setMobileOpen(false)}
-                >
-                  <span className={styles.menuIcon}>
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M17 21v-2a4 4 0 0 0-4-4H5c-2 0-4 2-4 4v2" />
-                      <circle cx="9" cy="7" r="4" />
-                      <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-                      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-                    </svg>
-                  </span>
-                  <span className={styles.menuLabel}>Users</span>
-                </Link>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <Link
+                    href="/pengaturan-user"
+                    className={`${styles.menuItem} ${pathname.startsWith('/pengaturan-user') ? styles.active : ''}`}
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    <span className={styles.menuIcon}>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5c-2 0-4 2-4 4v2" />
+                        <circle cx="9" cy="7" r="4" />
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                      </svg>
+                    </span>
+                    <span className={styles.menuLabel}>Users</span>
+                  </Link>
+
+                  <Link
+                    href="/activity-log"
+                    className={`${styles.menuItem} ${pathname.startsWith('/activity-log') ? styles.active : ''}`}
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    <span className={styles.menuIcon}>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+                      </svg>
+                    </span>
+                    <span className={styles.menuLabel}>Log Aktivitas</span>
+                  </Link>
+                </div>
               </li>
             )}
           </ul>

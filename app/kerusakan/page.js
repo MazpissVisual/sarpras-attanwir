@@ -175,11 +175,40 @@ export default function KerusakanPage() {
       if (modalMode === 'create') {
         const { data, error } = await supabase.from('damage_reports').insert([{ ...payload, status: 'dilaporkan' }]).select();
         if (error) throw error;
+
+        // --- ACTIVITY LOG ---
+        import('@/lib/activityLog').then(({ logActivity }) => {
+          logActivity({
+            aktivitas: 'tambah',
+            modul: 'kerusakan',
+            deskripsi: `Membuat laporan kerusakan: ${formData.nama_barang}`,
+            dataSesudah: data[0],
+            userId: userProfile?.id,
+            namaUser: userProfile?.full_name || userProfile?.email,
+            roleUser: userProfile?.role,
+          });
+        });
+
         setReports(prev => [data[0], ...prev]);
         addToast('Laporan dikirim', 'success');
       } else {
         const { data, error } = await supabase.from('damage_reports').update(payload).eq('id', editingReport.id).select();
         if (error) throw error;
+
+        // --- ACTIVITY LOG ---
+        import('@/lib/activityLog').then(({ logActivity }) => {
+          logActivity({
+            aktivitas: 'edit',
+            modul: 'kerusakan',
+            deskripsi: `Mengedit laporan kerusakan: ${formData.nama_barang}`,
+            dataSebelum: editingReport,
+            dataSesudah: data[0],
+            userId: userProfile?.id,
+            namaUser: userProfile?.full_name || userProfile?.email,
+            roleUser: userProfile?.role,
+          });
+        });
+
         setReports(prev => prev.map(r => r.id === editingReport.id ? data[0] : r));
         addToast('Laporan diperbarui', 'success');
       }
@@ -212,6 +241,20 @@ export default function KerusakanPage() {
     setUpdatingId(id);
     const { error } = await supabase.from('damage_reports').update({ status: s }).eq('id', id);
     if (!error) {
+      const report = reports.find(r => r.id === id);
+      
+      // --- ACTIVITY LOG ---
+      import('@/lib/activityLog').then(({ logActivity }) => {
+        logActivity({
+          aktivitas: 'edit',
+          modul: 'kerusakan',
+          deskripsi: `Mengubah status laporan '${report?.nama_barang}' menjadi ${s}`,
+          userId: userProfile?.id,
+          namaUser: userProfile?.full_name || userProfile?.email,
+          roleUser: userProfile?.role,
+        });
+      });
+
       setReports(prev => prev.map(r => r.id === id ? { ...r, status: s } : r));
       addToast('Status diperbarui', 'success');
     }
@@ -230,6 +273,19 @@ export default function KerusakanPage() {
         .eq('id', stockReport.id);
       if (error) throw error;
 
+      // --- ACTIVITY LOG ---
+      import('@/lib/activityLog').then(({ logActivity }) => {
+        logActivity({
+          aktivitas: 'edit',
+          modul: 'kerusakan',
+          deskripsi: `Laporan kerusakan '${stockReport.nama_barang}' diselesaikan${reduceStock ? ` (Stok dikurangi ${damageQty})` : ''}`,
+          userId: userProfile?.id,
+          namaUser: userProfile?.full_name || userProfile?.email,
+          roleUser: userProfile?.role,
+        });
+      });
+      // --------------------
+
       setReports(prev => prev.map(r => r.id === stockReport.id ? { ...r, status: 'selesai' } : r));
 
       // 2. Kurangi stok jika diminta
@@ -242,6 +298,18 @@ export default function KerusakanPage() {
         });
 
         if (result.success) {
+          // --- ACTIVITY LOG STOK ---
+          import('@/lib/activityLog').then(({ logActivity }) => {
+            logActivity({
+              aktivitas: 'barang_rusak',
+              modul: 'stok',
+              deskripsi: `Stok dikurangi ${damageQty} karena rusak (${stockReport.nama_barang})`,
+              userId: userProfile?.id,
+              namaUser: userProfile?.full_name || userProfile?.email,
+              roleUser: userProfile?.role,
+            });
+          });
+          // -------------------------
           addToast(`Status selesai & stok dikurangi ${damageQty}`, 'success');
         } else {
           addToast(`Status diupdate tapi gagal kurangi stok: ${result.error}`, 'warning');
@@ -261,8 +329,24 @@ export default function KerusakanPage() {
 
   const handleDelete = async (id) => {
     if (!confirm('Hapus laporan?')) return;
+    const report = reports.find(r => r.id === id);
     const { error } = await supabase.from('damage_reports').delete().eq('id', id);
-    if (!error) setReports(prev => prev.filter(r => r.id !== id));
+    if (!error) {
+      // --- ACTIVITY LOG ---
+      import('@/lib/activityLog').then(({ logActivity }) => {
+        logActivity({
+          aktivitas: 'hapus',
+          modul: 'kerusakan',
+          deskripsi: `Menghapus laporan kerusakan '${report?.nama_barang}'`,
+          dataSebelum: report,
+          userId: userProfile?.id,
+          namaUser: userProfile?.full_name || userProfile?.email,
+          roleUser: userProfile?.role,
+        });
+      });
+      
+      setReports(prev => prev.filter(r => r.id !== id));
+    }
   };
 
   const formatDate = (d) => new Date(d).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
