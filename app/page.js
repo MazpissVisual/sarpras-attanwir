@@ -87,19 +87,19 @@ function AlertItem({ alert }) {
 // ─── Activity Icon ──────────────────────────────────────────
 function ActivityIcon({ type }) {
   if (type === 'belanja') return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
       <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
     </svg>
   );
   if (type === 'pembayaran') return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/>
       <line x1="1" y1="10" x2="23" y2="10"/>
     </svg>
   );
   return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
       <polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
     </svg>
@@ -167,7 +167,7 @@ export default function DashboardPage() {
     <>
       <Header
         title="Dashboard"
-        subtitle={`${bulan === 'all' ? 'Semua Bulan' : MONTHS_ID[bulan]} ${tahun === 'all' ? 'Semua Tahun' : tahun} — Ringkasan Sarpras Attanwir`}
+        subtitle={`${bulan === 'all' ? 'Semua Bulan' : MONTHS_ID[bulan]} ${tahun === 'all' ? 'Semua Tahun' : tahun} — Ringkasan Sarpras PontrenMu Attanwir`}
       />
       <div className={styles.dashboard}>
 
@@ -206,7 +206,7 @@ export default function DashboardPage() {
               onClick={handleRefresh}
               disabled={refreshing}
             >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="23 4 23 10 17 10"/>
                 <polyline points="1 20 1 14 7 14"/>
                 <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
@@ -253,7 +253,7 @@ export default function DashboardPage() {
         ══════════════════════════════════════ */}
         <div className={styles.kpiGrid}>
           <KpiCard
-            icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>}
+            icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>}
             label={bulan === 'all' ? "Total Belanja" : "Total Belanja Bulan Ini"}
             value={rpCompact(kpi?.totalBelanjaIni)}
             sub={rp(kpi?.totalBelanjaIni)}
@@ -263,7 +263,7 @@ export default function DashboardPage() {
             loading={loading}
           />
           <KpiCard
-            icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>}
+            icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>}
             label={bulan === 'all' ? "Barang Keluar" : "Barang Keluar Bulan Ini"}
             value={`${kpi?.jumlahBarangKeluarIni ?? 0} item`}
             sub="Total unit yang dikeluarkan"
@@ -273,7 +273,7 @@ export default function DashboardPage() {
           />
 
           <KpiCard
-            icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>}
+            icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>}
             label={bulan === 'all' ? "Barang Rusak" : "Barang Rusak Bulan Ini"}
             value={kpi?.jumlahBarangRusakIni ?? 0}
             sub="Laporan kerusakan"
@@ -282,7 +282,7 @@ export default function DashboardPage() {
             loading={loading}
           />
           <KpiCard
-            icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/></svg>}
+            icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/></svg>}
             label={bulan === 'all' ? "Total Dibayar" : "Total Dibayar Bulan Ini"}
             value={rpCompact(kpi?.totalDibayarIni)}
             sub={rp(kpi?.totalDibayarIni)}
@@ -291,7 +291,7 @@ export default function DashboardPage() {
             loading={loading}
           />
           <KpiCard
-            icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>}
+            icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>}
             label="Tagihan Jatuh Tempo"
             value={kpi?.jumlahTagihanJatuhTempo ?? 0}
             sub={kpi?.totalTagihanJatuhTempo ? rp(kpi.totalTagihanJatuhTempo) : 'Tidak ada tagihan'}
@@ -300,7 +300,7 @@ export default function DashboardPage() {
             loading={loading}
           />
           <KpiCard
-            icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>}
+            icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>}
             label={bulan === 'all' ? "Total Transaksi" : "Transaksi Bulan Ini"}
             value={kpi?.jumlahTransaksiIni ?? '—'}
             sub={`Bulan lalu: ${kpi?.jumlahTransaksiLalu ?? 0}`}
@@ -310,7 +310,7 @@ export default function DashboardPage() {
             loading={loading}
           />
           <KpiCard
-            icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>}
+            icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>}
             label="Kondisi Stok (Keseluruhan)"
             value={kpi?.stokKritisCount ?? '—'}
             sub={kpi?.stokHabisCount > 0 ? `${kpi.stokHabisCount} item stok habis (0)` : 'Tidak ada stok habis'}
@@ -471,7 +471,7 @@ export default function DashboardPage() {
             <div className={styles.alertLoading}><div className={styles.spinner} /></div>
           ) : (data?.alerts || []).length === 0 ? (
             <div className={styles.alertOk}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="20 6 9 17 4 12"/>
               </svg>
               Semua kondisi aman — tidak ada alert aktif
@@ -497,7 +497,7 @@ export default function DashboardPage() {
               <div className={styles.chartLoading}><div className={styles.spinner} /></div>
             ) : (data?.upcomingDue || []).length === 0 ? (
               <div className={styles.emptyState}>
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" strokeWidth="1.5"><polyline points="20 6 9 17 4 12"/></svg>
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                 <p>Tidak ada tagihan jatuh tempo</p>
               </div>
             ) : (
@@ -530,7 +530,7 @@ export default function DashboardPage() {
               <div className={styles.chartLoading}><div className={styles.spinner} /></div>
             ) : (data?.topBarangKeluar || []).length === 0 ? (
               <div className={styles.emptyState}>
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" strokeWidth="1.5"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
                 <p>Belum ada data barang keluar</p>
               </div>
             ) : (
@@ -570,7 +570,7 @@ export default function DashboardPage() {
               <div className={styles.chartLoading}><div className={styles.spinner} /></div>
             ) : (data?.stokKritis || []).length === 0 ? (
               <div className={styles.emptyState}>
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" strokeWidth="1.5"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
                 <p>Semua stok dalam kondisi aman</p>
               </div>
             ) : (

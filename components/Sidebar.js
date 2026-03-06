@@ -170,7 +170,7 @@ export default function Sidebar() {
           </div>
           <div className={styles.brandInfo}>
             <span className={styles.brandText}>Sarpras Digital</span>
-            <span className={styles.brandSub}>Attanwir</span>
+            <span className={styles.brandSub}>PontrenMU Attanwir</span>
           </div>
 
           <button

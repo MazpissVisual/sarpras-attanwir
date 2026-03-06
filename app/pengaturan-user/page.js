@@ -167,7 +167,7 @@ export default function PengaturanUserPage() {
             <p>Manage access and roles</p>
           </div>
           <button className={styles.addUserBtn} onClick={handleCreateNew}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="12" y1="5" x2="12" y2="19" />
               <line x1="5" y1="12" x2="19" y2="12" />
             </svg>
@@ -204,7 +204,7 @@ export default function PengaturanUserPage() {
 
                     <td>
                       <div className={`${styles.roleDivInfo} ${u.role && (u.role.toLowerCase().replace(/[\s_-]+/g, '') === 'superadmin' || u.role.toLowerCase().replace(/[\s_-]+/g, '') === 'admin') ? styles.superRole : u.role === 'pimpinan' || u.role === 'kepala_sekolah' ? styles.kepsekRole : ''}`}>
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                           <circle cx="12" cy="12" r="10" />
                         </svg>
                         <span style={{ textTransform: 'capitalize' }}>{u.role && u.role.toLowerCase().replace(/[\s_-]+/g, '') === 'superadmin' ? 'Super Admin' : u.role === 'kepala_sekolah' ? 'Pimpinan' : u.role}</span>
