@@ -554,6 +554,16 @@
   font-weight: 600;
 }
 
+.tableWrap {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.tableWrap table {
+  min-width: 600px;
+}
+
 /* ================================================
    RESPONSIVE
    ================================================ */

@@ -454,6 +454,7 @@
   .tableWrap {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
+    width: 100%;
   }
   .table { min-width: 700px; }
   .modalCard { max-width: 100%; }

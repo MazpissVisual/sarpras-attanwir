@@ -355,6 +355,7 @@
   .tableContainer {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
+    width: 100%;
   }
 
   .userTable {
