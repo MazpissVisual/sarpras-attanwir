@@ -166,8 +166,6 @@ export default function LoginPage() {
         <div className={styles.rightCol}>
           <div className={styles.rightOverlay}>
             <div className={styles.rightContent}>
-              <div className={styles.heroGraphic}>
-              </div>
               <h2>Kelola Sarana Prasarana Lebih Mudah</h2>
               <p>Pantau inventaris barang, riwayat stok, laporan kerusakan, dan pengadaan barang secara terpusat dalam satu aplikasi yang cerdas dan aman.</p>
             </div>
