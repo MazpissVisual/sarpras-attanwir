@@ -492,12 +492,14 @@ export default function BelanjaBaru() {
                         <div className={styles.priceInput}>
                           <span className={styles.pricePrefix}>Rp</span>
                           <input
-                            type="number"
+                            type="text"
                             className={styles.tableInput}
                             placeholder="0"
-                            min="0"
-                            value={item.harga_satuan}
-                            onChange={(e) => updateItem(idx, 'harga_satuan', e.target.value)}
+                            value={item.harga_satuan ? Number(item.harga_satuan).toLocaleString('id-ID') : ''}
+                            onChange={(e) => {
+                              const val = e.target.value.replace(/\D/g, '');
+                              updateItem(idx, 'harga_satuan', val);
+                            }}
                           />
                         </div>
                       </td>
@@ -581,12 +583,14 @@ export default function BelanjaBaru() {
                     <div className={styles.priceInputMobile}>
                       <span className={styles.pricePrefix}>Rp</span>
                       <input
-                        type="number"
+                        type="text"
                         className="formInput"
                         placeholder="0"
-                        min="0"
-                        value={item.harga_satuan}
-                        onChange={(e) => updateItem(idx, 'harga_satuan', e.target.value)}
+                        value={item.harga_satuan ? Number(item.harga_satuan).toLocaleString('id-ID') : ''}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/\D/g, '');
+                          updateItem(idx, 'harga_satuan', val);
+                        }}
                       />
                     </div>
                   </div>
@@ -685,13 +689,14 @@ export default function BelanjaBaru() {
                   <div className="formGroup">
                     <label className="formLabel">{dpType === 'persen' ? 'Persentase DP (%)' : 'Nominal DP (Rp)'}</label>
                     <input
-                      type="number"
+                      type={dpType === 'persen' ? 'number' : 'text'}
                       className="formInput"
-                      placeholder={dpType === 'persen' ? 'Cth: 30' : 'Cth: 150000'}
-                      min="0"
-                      max={dpType === 'persen' ? 100 : grandTotal}
-                      value={dpInput}
-                      onChange={(e) => setDpInput(e.target.value)}
+                      placeholder={dpType === 'persen' ? 'Cth: 30' : 'Cth: 150.000'}
+                      value={dpType === 'persen' ? dpInput : (dpInput ? Number(dpInput).toLocaleString('id-ID') : '')}
+                      onChange={(e) => {
+                        const val = dpType === 'persen' ? e.target.value : e.target.value.replace(/\D/g, '');
+                        setDpInput(val);
+                      }}
                     />
                   </div>
                 </div>

@@ -486,10 +486,15 @@ export default function DetailClient({ initialData, id }) {
             <form onSubmit={handleAddPayment} className={styles.payForm}>
               <div className="formGroup">
                 <label className="formLabel">Nominal Bayar (Rp) *</label>
-                <input type="number" className="formInput" required min="1"
-                  max={transaksi.sisa_tagihan}
-                  value={payForm.jumlah_bayar}
-                  onChange={(e) => setPayForm({ ...payForm, jumlah_bayar: e.target.value })}
+                <input
+                  type="text"
+                  className="formInput"
+                  required
+                  value={payForm.jumlah_bayar ? Number(payForm.jumlah_bayar).toLocaleString('id-ID') : ''}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, '');
+                    setPayForm({ ...payForm, jumlah_bayar: val });
+                  }}
                   placeholder={`Maks: ${Number(transaksi.sisa_tagihan).toLocaleString('id-ID')}`}
                 />
               </div>
