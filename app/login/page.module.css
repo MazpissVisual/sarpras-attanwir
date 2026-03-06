@@ -25,14 +25,10 @@
 .logo {
   width: 64px;
   height: 64px;
-  background: #2563eb;
-  color: #fff;
-  border-radius: 18px;
   display: flex;
   align-items: center;
   justify-content: center;
   margin: 0 auto 16px;
-  box-shadow: 0 10px 20px rgba(37, 99, 235, 0.2);
 }
 
 .header h1 {

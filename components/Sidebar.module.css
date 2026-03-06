@@ -69,13 +69,9 @@
   width: 40px;
   height: 40px;
   min-width: 40px;
-  background: linear-gradient(135deg, #2563eb, #1d4ed8);
-  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #fff;
-  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
 }
 
 .brandInfo {

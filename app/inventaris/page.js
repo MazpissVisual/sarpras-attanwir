@@ -7,6 +7,7 @@ import { AuthContext } from '@/components/AuthProvider';
 import { supabase } from '@/lib/supabase';
 import { adjustStockManual } from '@/lib/stockService';
 import { logActivity } from '@/lib/activityLog';
+import { exportInventoryToExcel } from '@/lib/exportExcel';
 import styles from './page.module.css';
 
 const KATEGORI_OPTIONS = [
@@ -317,6 +318,21 @@ export default function InventarisPage() {
   const cleanRole = userProfile?.role ? userProfile.role.toLowerCase().replace(/[\s_-]+/g, '') : '';
   const isReadOnly = !['superadmin', 'admin', 'staff'].includes(cleanRole);
 
+  const handleExportExcel = () => {
+    if (filteredItems.length === 0) {
+      addToast('Tidak ada data untuk diekspor', 'error');
+      return;
+    }
+    
+    try {
+      exportInventoryToExcel(filteredItems, 'Data_Inventaris');
+      addToast('Data inventaris berhasil diekspor', 'success');
+    } catch (err) {
+      console.error(err);
+      addToast('Gagal mengekspor data', 'error');
+    }
+  };
+
   return (
     <>
       <Header title="Inventaris Barang" subtitle="Kelola stok aset sarana & prasarana" />
@@ -379,14 +395,27 @@ export default function InventarisPage() {
             </select>
           </div>
 
-          {!isReadOnly && (
-            <button className="btn btnPrimary" onClick={openCreateModal}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+          <div style={{ display: 'flex', gap: '8px', alignItem: 'center' }}>
+            <button className="btn btnSecondary" onClick={handleExportExcel} title="Export ke Excel">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+                <line x1="16" y1="13" x2="8" y2="13"></line>
+                <line x1="16" y1="17" x2="8" y2="17"></line>
+                <polyline points="10 9 9 9 8 9"></polyline>
               </svg>
-              Tambah Barang
+              Export
             </button>
-          )}
+
+            {!isReadOnly && (
+              <button className="btn btnPrimary" onClick={openCreateModal}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+                Tambah
+              </button>
+            )}
+          </div>
         </div>
 
         {/* ===== Table ===== */}

@@ -231,13 +231,7 @@ export default function RiwayatStokPage() {
               <span className={styles.statLabel}>Penyesuaian</span>
             </div>
           </div>
-          <div className={`${styles.statChip} ${styles.statChipDmg}`}>
-            <span className={styles.statIcon}><IcRusakLg /></span>
-            <div className={styles.statContent}>
-              <span className={styles.statValue}>{stats.dmgCount}</span>
-              <span className={styles.statLabel}>Kerusakan</span>
-            </div>
-          </div>
+
         </div>
 
         {/* ===== Filters ===== */}
