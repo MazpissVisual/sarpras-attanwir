@@ -289,6 +289,8 @@ img {
     padding-bottom: 200px !important; /* Naikin drastis buat ngetes */
     display: block !important;
     overflow-y: visible !important;
+    max-width: 100vw !important; /* Prevent horizontal stretch */
+    overflow-x: hidden !important; /* Prevent horizontal stretching content from zooming out page */
   }
 
   /* 2. PageContent jangan dikunci tingginya */
