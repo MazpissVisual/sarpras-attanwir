@@ -27,13 +27,20 @@ function clearCookies() {
 async function fetchProfile(userId) {
   if (!userId) return null;
   try {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('user_profiles')
       .select('*')
       .eq('id', userId)
       .single();
+      
+    if (error) {
+      console.error('[fetchProfile] Error from Supabase:', error);
+      return null;
+    }
+    
     return data;
-  } catch {
+  } catch (err) {
+    console.error('[fetchProfile] Exception:', err);
     return null;
   }
 }
@@ -87,8 +94,9 @@ export const AuthProvider = ({ children }) => {
           // 2. Background revalidation — NON-BLOCKING with .then()
           fetchProfile(currentUser.id).then((profile) => {
             if (!mounted) return;
-            setUserProfile(profile);
+            
             if (profile) {
+              setUserProfile(profile);
               localStorage.setItem(cacheKey, JSON.stringify(profile));
               setCookies(profile, currentUser);
             }
@@ -123,8 +131,9 @@ export const AuthProvider = ({ children }) => {
           // NON-BLOCKING fetch
           fetchProfile(currentUser.id).then((profile) => {
             if (!mounted) return;
-            setUserProfile(profile);
+            
             if (profile) {
+              setUserProfile(profile);
               localStorage.setItem(cacheKey, JSON.stringify(profile));
               setCookies(profile, currentUser);
             }
