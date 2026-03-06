@@ -10,23 +10,59 @@ import { getAdminClient } from '@/lib/supabase';
 export async function getDashboardData(opts = {}) {
   const admin = getAdminClient();
   const now = new Date();
-  const currentMonth = opts.bulan ?? now.getMonth(); // 0-indexed
-  const currentYear = opts.tahun ?? now.getFullYear();
+  const currentMonth = opts.bulan === 'all' ? 'all' : (opts.bulan ?? now.getMonth());
+  const currentYear = opts.tahun === 'all' ? 'all' : (opts.tahun ?? now.getFullYear());
 
-  // Date ranges using YYYY-MM-DD to avoid timezone issues
-  const startThisMonth = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-01`;
-  const lastDayThis = new Date(currentYear, currentMonth + 1, 0).getDate();
-  const endThisMonth = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(lastDayThis).padStart(2, '0')}`;
+  let startThisMonth = null;
+  let endThisMonth = null;
+  let startLastMonth = null;
+  let endLastMonth = null;
+  let damageStartObj = null;
+  let damageEndObj = null;
 
-  const prevMonth = currentMonth === 0 ? 11 : currentMonth - 1;
-  const prevYear = currentMonth === 0 ? currentYear - 1 : currentYear;
-  const startLastMonth = `${prevYear}-${String(prevMonth + 1).padStart(2, '0')}-01`;
-  const lastDayLast = new Date(prevYear, prevMonth + 1, 0).getDate();
-  const endLastMonth = `${prevYear}-${String(prevMonth + 1).padStart(2, '0')}-${String(lastDayLast).padStart(2, '0')}`;
+  if (currentYear !== 'all') {
+    if (currentMonth !== 'all') {
+      startThisMonth = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-01`;
+      const lastDayThis = new Date(currentYear, currentMonth + 1, 0).getDate();
+      endThisMonth = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(lastDayThis).padStart(2, '0')}`;
+      
+      damageStartObj = new Date(currentYear, currentMonth, 1);
+      damageEndObj = new Date(currentYear, currentMonth + 1, 0, 23, 59, 59);
 
-  // 12 months ago for trend
-  const trendStart = new Date(currentYear, currentMonth - 11, 1);
+      const prevMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+      const prevYear = currentMonth === 0 ? currentYear - 1 : currentYear;
+      startLastMonth = `${prevYear}-${String(prevMonth + 1).padStart(2, '0')}-01`;
+      const lastDayLast = new Date(prevYear, prevMonth + 1, 0).getDate();
+      endLastMonth = `${prevYear}-${String(prevMonth + 1).padStart(2, '0')}-${String(lastDayLast).padStart(2, '0')}`;
+    } else {
+      startThisMonth = `${currentYear}-01-01`;
+      endThisMonth = `${currentYear}-12-31`;
+      damageStartObj = new Date(currentYear, 0, 1);
+      damageEndObj = new Date(currentYear, 11, 31, 23, 59, 59);
+
+      startLastMonth = `${currentYear - 1}-01-01`;
+      endLastMonth = `${currentYear - 1}-12-31`;
+    }
+  }
+
+  // 12 months ago for trend (always based on current physical date if 'all' is selected)
+  const trendYear = currentYear === 'all' ? now.getFullYear() : currentYear;
+  const trendMonth = currentMonth === 'all' ? now.getMonth() : currentMonth;
+  const trendStart = new Date(trendYear, trendMonth - 11, 1);
   const trendStartStr = `${trendStart.getFullYear()}-${String(trendStart.getMonth() + 1).padStart(2, '0')}-01`;
+
+  // Build Queries conditionally
+  let txThisQuery = admin.from('transactions').select('total_bayar, total_dibayar, sisa_tagihan, status_lunas, metode_bayar, kategori');
+  let txLastQuery = admin.from('transactions').select('total_bayar, total_dibayar');
+  let bkThisQuery = admin.from('barang_keluar').select('id, barang_id, qty, tujuan, penanggung_jawab, tanggal, created_at, inventory:barang_id(nama_barang)');
+  let dmgThisQuery = admin.from('damage_reports').select('id, nama_barang, status, created_at');
+
+  if (startThisMonth) {
+    txThisQuery = txThisQuery.gte('tanggal', startThisMonth).lte('tanggal', endThisMonth);
+    txLastQuery = txLastQuery.gte('tanggal', startLastMonth).lte('tanggal', endLastMonth);
+    bkThisQuery = bkThisQuery.gte('tanggal', startThisMonth).lte('tanggal', endThisMonth);
+    dmgThisQuery = dmgThisQuery.gte('created_at', damageStartObj.toISOString()).lte('created_at', damageEndObj.toISOString());
+  }
 
   // =============================================
   // PARALLEL QUERIES
@@ -46,17 +82,11 @@ export async function getDashboardData(opts = {}) {
     damageThisMonthRes,
   ] = await Promise.all([
 
-    // 1. Transaksi bulan ini (bulan terpilih)
-    admin.from('transactions')
-      .select('total_bayar, total_dibayar, sisa_tagihan, status_lunas, metode_bayar, kategori')
-      .gte('tanggal', startThisMonth)
-      .lte('tanggal', endThisMonth),
+    // 1. Transaksi bulan/tahun terpilih
+    txThisQuery,
 
-    // 2. Transaksi bulan lalu
-    admin.from('transactions')
-      .select('total_bayar, total_dibayar')
-      .gte('tanggal', startLastMonth)
-      .lte('tanggal', endLastMonth),
+    // 2. Transaksi bulan/tahun sebelumnya
+    txLastQuery,
 
     // 3. Semua transaksi belum lunas
     admin.from('transactions')
@@ -79,11 +109,8 @@ export async function getDashboardData(opts = {}) {
       .order('stok_saat_ini', { ascending: true })
       .limit(1000),
 
-    // 7. Barang keluar bulan ini — JOIN inventory via barang_id
-    admin.from('barang_keluar')
-      .select('id, barang_id, qty, tujuan, penanggung_jawab, tanggal, created_at, inventory:barang_id(nama_barang)')
-      .gte('tanggal', startThisMonth)
-      .lte('tanggal', endThisMonth),
+    // 7. Barang keluar periode terpilih — JOIN inventory via barang_id
+    bkThisQuery,
 
     // 8. Barang keluar trend 12 bulan
     admin.from('barang_keluar')
@@ -109,11 +136,8 @@ export async function getDashboardData(opts = {}) {
       .order('created_at', { ascending: false })
       .limit(10),
 
-    // 12. Damage reports bulan ini
-    admin.from('damage_reports')
-      .select('id, nama_barang, status, created_at')
-      .gte('created_at', new Date(currentYear, currentMonth, 1).toISOString())
-      .lte('created_at', new Date(currentYear, currentMonth + 1, 0, 23, 59, 59).toISOString()),
+    // 12. Damage reports periode terpilih
+    dmgThisQuery,
   ]);
 
   // Log errors

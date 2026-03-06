@@ -38,18 +38,27 @@ export default function LaporanPage() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      // Use YYYY-MM-DD format to filter by tanggal (transaction date), not created_at
-      // This avoids timezone conversion issues with toISOString() (WIB = UTC+7)
-      const startDate = `${tahun}-${String(bulan + 1).padStart(2, '0')}-01`;
-      const lastDay = new Date(tahun, bulan + 1, 0).getDate();
-      const endDate = `${tahun}-${String(bulan + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
-
-      const { data, error } = await supabase
+      let query = supabase
         .from('transactions')
-        .select('*')
-        .gte('tanggal', startDate)
-        .lte('tanggal', endDate)
+        .select('*, transaction_items(nama_barang, jumlah, satuan, harga_satuan)')
         .order('tanggal', { ascending: false });
+
+      if (tahun !== 'all') {
+        if (bulan !== 'all') {
+          // Use YYYY-MM-DD format to filter by tanggal
+          const startDate = `${tahun}-${String(bulan + 1).padStart(2, '0')}-01`;
+          const lastDay = new Date(tahun, bulan + 1, 0).getDate();
+          const endDate = `${tahun}-${String(bulan + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+          query = query.gte('tanggal', startDate).lte('tanggal', endDate);
+        } else {
+          // All months in a specific year
+          const startDate = `${tahun}-01-01`;
+          const endDate = `${tahun}-12-31`;
+          query = query.gte('tanggal', startDate).lte('tanggal', endDate);
+        }
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
 
@@ -92,8 +101,10 @@ export default function LaporanPage() {
 
     setExporting(true);
     try {
-      exportTransactionsToExcel(transactions, `Rekap_Belanja_${MONTHS[bulan]}_${tahun}`);
-      addToast(`Rekap belanja ${MONTHS[bulan]} ${tahun} berhasil diunduh!`, 'success');
+      const monthText = bulan === 'all' ? 'Semua_Bulan' : MONTHS[bulan];
+      const yearText = tahun === 'all' ? 'Semua_Tahun' : tahun;
+      exportTransactionsToExcel(transactions, `Rekap_Belanja_${monthText}_${yearText}`);
+      addToast(`Rekap belanja ${monthText.replace('_', ' ')} ${yearText.toString().replace('_', ' ')} berhasil diunduh!`, 'success');
     } catch (err) {
       addToast('Gagal mengekspor: ' + (err.message || ''), 'error');
     } finally {
@@ -112,7 +123,8 @@ export default function LaporanPage() {
         <div className={styles.filterBar}>
           <div className={styles.filterGroup}>
             <label className="formLabel">Bulan</label>
-            <select className="formSelect" value={bulan} onChange={(e) => setBulan(Number(e.target.value))}>
+            <select className="formSelect" value={bulan} onChange={(e) => setBulan(e.target.value === 'all' ? 'all' : Number(e.target.value))}>
+              <option value="all">Semua Bulan</option>
               {MONTHS.map((m, i) => (
                 <option key={i} value={i}>{m}</option>
               ))}
@@ -120,7 +132,8 @@ export default function LaporanPage() {
           </div>
           <div className={styles.filterGroup}>
             <label className="formLabel">Tahun</label>
-            <select className="formSelect" value={tahun} onChange={(e) => setTahun(Number(e.target.value))}>
+            <select className="formSelect" value={tahun} onChange={(e) => setTahun(e.target.value === 'all' ? 'all' : Number(e.target.value))}>
+              <option value="all">Semua Tahun</option>
               {[2024, 2025, 2026, 2027].map((y) => (
                 <option key={y} value={y}>{y}</option>
               ))}
@@ -173,7 +186,7 @@ export default function LaporanPage() {
         {/* Transactions Table */}
         <div className={styles.tableSection}>
           <div className={styles.tableSectionHeader}>
-            <h3>Daftar Transaksi — {MONTHS[bulan]} {tahun}</h3>
+            <h3>Daftar Transaksi — {bulan === 'all' ? '' : MONTHS[bulan]} {tahun === 'all' ? 'Semua Waktu' : tahun}</h3>
           </div>
           {loading ? (
             <div className={styles.loadingState}>
@@ -187,7 +200,7 @@ export default function LaporanPage() {
                 <polyline points="14 2 14 8 20 8" />
               </svg>
               <h4>Tidak Ada Transaksi</h4>
-              <p>Belum ada data belanja untuk {MONTHS[bulan]} {tahun}</p>
+              <p>Belum ada data belanja untuk {bulan === 'all' ? '' : MONTHS[bulan]} {tahun === 'all' ? 'Semua Waktu' : tahun}</p>
             </div>
           ) : (
             <>

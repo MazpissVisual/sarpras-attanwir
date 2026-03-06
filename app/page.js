@@ -167,7 +167,7 @@ export default function DashboardPage() {
     <>
       <Header
         title="Dashboard"
-        subtitle={`${MONTHS_ID[bulan]} ${tahun} — Ringkasan Sarpras Attanwir`}
+        subtitle={`${bulan === 'all' ? 'Semua Bulan' : MONTHS_ID[bulan]} ${tahun === 'all' ? 'Semua Tahun' : tahun} — Ringkasan Sarpras Attanwir`}
       />
       <div className={styles.dashboard}>
 
@@ -183,8 +183,9 @@ export default function DashboardPage() {
               <select
                 className={styles.filterSelect}
                 value={bulan}
-                onChange={(e) => setBulan(Number(e.target.value))}
+                onChange={(e) => setBulan(e.target.value === 'all' ? 'all' : Number(e.target.value))}
               >
+                <option value="all">Semua Bulan</option>
                 {MONTHS_ID.map((m, i) => (
                   <option key={i} value={i}>{m}</option>
                 ))}
@@ -192,8 +193,9 @@ export default function DashboardPage() {
               <select
                 className={styles.filterSelect}
                 value={tahun}
-                onChange={(e) => setTahun(Number(e.target.value))}
+                onChange={(e) => setTahun(e.target.value === 'all' ? 'all' : Number(e.target.value))}
               >
+                <option value="all">Semua Tahun</option>
                 {yearOptions.map(y => (
                   <option key={y} value={y}>{y}</option>
                 ))}
@@ -252,7 +254,7 @@ export default function DashboardPage() {
         <div className={styles.kpiGrid}>
           <KpiCard
             icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>}
-            label="Total Belanja Bulan Ini"
+            label={bulan === 'all' ? "Total Belanja" : "Total Belanja Bulan Ini"}
             value={rpCompact(kpi?.totalBelanjaIni)}
             sub={rp(kpi?.totalBelanjaIni)}
             change={kpi?.totalBelanjaChange}
@@ -262,7 +264,7 @@ export default function DashboardPage() {
           />
           <KpiCard
             icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>}
-            label="Barang Keluar Bulan Ini"
+            label={bulan === 'all' ? "Barang Keluar" : "Barang Keluar Bulan Ini"}
             value={`${kpi?.jumlahBarangKeluarIni ?? 0} item`}
             sub="Total unit yang dikeluarkan"
             color="orange"
@@ -272,7 +274,7 @@ export default function DashboardPage() {
 
           <KpiCard
             icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>}
-            label="Barang Rusak Bulan Ini"
+            label={bulan === 'all' ? "Barang Rusak" : "Barang Rusak Bulan Ini"}
             value={kpi?.jumlahBarangRusakIni ?? 0}
             sub="Laporan kerusakan"
             color="red"
@@ -281,7 +283,7 @@ export default function DashboardPage() {
           />
           <KpiCard
             icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/></svg>}
-            label="Total Dibayar Bulan Ini"
+            label={bulan === 'all' ? "Total Dibayar" : "Total Dibayar Bulan Ini"}
             value={rpCompact(kpi?.totalDibayarIni)}
             sub={rp(kpi?.totalDibayarIni)}
             color="green"
@@ -299,7 +301,7 @@ export default function DashboardPage() {
           />
           <KpiCard
             icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>}
-            label="Transaksi Bulan Ini"
+            label={bulan === 'all' ? "Total Transaksi" : "Transaksi Bulan Ini"}
             value={kpi?.jumlahTransaksiIni ?? '—'}
             sub={`Bulan lalu: ${kpi?.jumlahTransaksiLalu ?? 0}`}
             change={kpi?.transChange}
@@ -399,12 +401,12 @@ export default function DashboardPage() {
           <div className={styles.chartCard}>
             <div className={styles.chartHead}>
               <h3>🏷️ Pengeluaran per Kategori</h3>
-              <span className={styles.chartSub}>Bulan ini</span>
+              <span className={styles.chartSub}>{bulan === 'all' ? 'Semua waktu' : 'Bulan ini'}</span>
             </div>
             {loading ? (
               <div className={styles.chartLoading}><div className={styles.spinner} /></div>
             ) : (data?.categoryData || []).length === 0 ? (
-              <div className={styles.emptyState}><p>Belum ada data kategori bulan ini</p></div>
+              <div className={styles.emptyState}><p>Belum ada data kategori {bulan === 'all' ? '' : 'bulan ini'}</p></div>
             ) : (
               <div className={styles.categoryWrap}>
                 <ResponsiveContainer width="100%" height={200}>
