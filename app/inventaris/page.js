@@ -244,9 +244,12 @@ export default function InventarisPage() {
 
   // ===== DELETE =====
   const handleDelete = async (item) => {
-    if (!confirm(`Yakin ingin menghapus "${item.nama_barang}" dari inventaris?`)) return;
+    if (!confirm(`Yakin ingin menghapus "${item.nama_barang}" dari inventaris?\n\nSemua riwayat stok terkait juga akan ikut terhapus.`)) return;
 
     try {
+      // Hapus riwayat stok (stock_logs) terlebih dahulu agar tidak kena foreign key constraint
+      await supabase.from('stock_logs').delete().eq('product_id', item.id);
+
       const { error } = await supabase.from('inventory').delete().eq('id', item.id);
       if (error) throw error;
 

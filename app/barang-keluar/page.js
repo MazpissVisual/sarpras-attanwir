@@ -21,7 +21,8 @@ export default function BarangKeluarPage() {
   // Clean role for admin access check
   const cleanRole = userProfile?.role ? userProfile.role.toLowerCase().replace(/[\s_-]+/g, '') : '';
   const isAdmin = cleanRole === 'superadmin' || cleanRole === 'admin';
-  const hasAccess = isAdmin || (userProfile?.access_rights || []).includes('Barang Keluar');
+  const isStaff = cleanRole === 'staff';
+  const hasAccess = isAdmin || isStaff || (userProfile?.access_rights || []).includes('Barang Keluar');
 
   const [formData, setFormData] = useState({
     barang_id: '',

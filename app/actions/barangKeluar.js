@@ -1,17 +1,18 @@
 'use server'
 
 import { getAdminClient } from '@/lib/supabase';
-import { isServerAdmin } from '@/lib/serverAuth';
+import { getUserRole } from '@/lib/serverAuth';
 import { logActivity } from '@/lib/activityLog';
-
 
 export async function submitBarangKeluarAction(payload) {
   try {
-    // 1. Validasi role (minimal perlu akses insert, biasanya di sini admin atau staff)
-    // Mengacu pada permintaan 'Hanya admin yang bisa create', kita cek dengan isServerAdmin()
-    const isAdmin = await isServerAdmin();
-    if (!isAdmin) {
-      return { success: false, error: 'Akses Ditolak: Hanya Admin yang dapat mengeluarkan barang.' };
+    // 1. Validasi role: admin, superadmin, atau staff diizinkan menambah barang keluar
+    const role = await getUserRole();
+    const cleanRole = role ? role.toLowerCase().replace(/[\s_-]+/g, '') : '';
+    const isAllowed = ['superadmin', 'admin', 'staff'].includes(cleanRole);
+    
+    if (!isAllowed) {
+      return { success: false, error: 'Akses Ditolak: Hanya Admin atau Staff yang dapat mengeluarkan barang.' };
     }
 
     const { barang_id, qty, tujuan, penanggung_jawab, tanggal, catatan, created_by } = payload;
