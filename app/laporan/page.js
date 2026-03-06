@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useContext } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import Header from '@/components/Header';
 import { useToast } from '@/components/Toast';
 import { AuthContext } from '@/components/AuthProvider';
@@ -236,7 +237,7 @@ export default function LaporanPage() {
               {/* Mobile Card View */}
               <div className={styles.mobileCards}>
                 {transactions.map((tx) => (
-                  <div key={tx.id} className={styles.reportMobileCard}>
+                  <Link key={tx.id} href={`/laporan/${tx.id}`} className={styles.reportMobileCard} style={{ textDecoration: 'none', cursor: 'pointer' }}>
                     <div className={styles.cardHeader}>
                       <span className={styles.cardDate}>{formatDate(tx.tanggal || tx.created_at)}</span>
                       <span className={`badge ${tx.status_lunas ? 'badgeSuccess' : 'badgeDanger'}`}>
@@ -256,7 +257,7 @@ export default function LaporanPage() {
                       <span className={styles.cardPrice}>{formatRupiah(tx.total_bayar)}</span>
                       <small style={{ color: '#64748b' }}>{tx.toko}</small>
                     </div>
-                  </div>
+                  </Link>
                 ))}
               </div>
             </>

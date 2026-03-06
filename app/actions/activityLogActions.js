@@ -1,14 +1,8 @@
 'use server';
 
-import { createClient } from '@supabase/supabase-js';
+import { getAdminClient } from '@/lib/supabase';
 import { getUserRole } from '@/lib/serverAuth';
 
-const getAdminClient = () => {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!key) throw new Error('SUPABASE_SERVICE_ROLE_KEY is required.');
-  return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } });
-};
 
 /**
  * Fetch activity logs with filters and pagination

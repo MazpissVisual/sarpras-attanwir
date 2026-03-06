@@ -1,75 +1,70 @@
 import { NextResponse } from 'next/server';
 
-// Peta Route ke requirement Akses (Access Rights modul)
-const routeToRightMap = {
+// ── Route → Required Access Right ─────────────────────────
+const ROUTE_RIGHTS = {
   '/belanja': 'Belanja',
   '/inventaris': 'Inventaris',
   '/riwayat-stok': 'Riwayat Stok',
   '/kerusakan': 'Kerusakan',
-  '/laporan': 'Laporan'
+  '/laporan': 'Laporan',
 };
 
-export function middleware(req) {
-  // 1. Ambil informasi dari cookies (yang kita set di AuthProvider saat login)
-  const role = req.cookies.get('sb-user-role')?.value;
-  let accessRights = [];
-  try {
-    accessRights = JSON.parse(req.cookies.get('sb-access-rights')?.value || '[]');
-  } catch(e) {}
+// ── Helper ─────────────────────────────────────────────────
+function isSuperAdmin(role) {
+  if (!role) return false;
+  const clean = role.toLowerCase().replace(/[\s_-]+/g, '');
+  return clean === 'superadmin' || clean === 'admin';
+}
 
+export function middleware(req) {
+  const role = req.cookies.get('sb-user-role')?.value;
   const path = req.nextUrl.pathname;
 
-  // 2. Bebaskan asset publik & API route internal Next.js
+  // 1. Skip public routes & static assets
   if (
-    path.startsWith('/login') || 
-    path.startsWith('/unauthorized') || 
-    path.startsWith('/_next') || 
-    path.startsWith('/api/') || 
+    path.startsWith('/login') ||
+    path.startsWith('/unauthorized') ||
+    path.startsWith('/_next') ||
+    path.startsWith('/api/') ||
     path.includes('.')
   ) {
     return NextResponse.next();
   }
 
-  // 3. Jika belum login (tidak ada cookie role), lempar ke /login
+  // 2. Not logged in → redirect to login
   if (!role) {
     return NextResponse.redirect(new URL('/login', req.url));
   }
 
-  // Helper function to check if role is super admin
-  const isSuperAdminRole = (r) => {
-    if (!r) return false;
-    const cleanRole = r.toLowerCase().replace(/[\s_-]+/g, '');
-    return cleanRole === 'superadmin' || cleanRole === 'admin';
-  };
-
-  // 4. Jika role adalah Super Admin atau Admin, izinkan melihat segalanya
-  if (isSuperAdminRole(role)) {
+  // 3. Super Admin / Admin → full access
+  if (isSuperAdmin(role)) {
     return NextResponse.next();
   }
 
-  // 5. Pembatasan Pengaturan User hanya untuk Superadmin
-  if (path.startsWith('/pengaturan-user') && !isSuperAdminRole(role)) {
+  // 4. /pengaturan-user → Super Admin only (already handled above, so always block here)
+  if (path.startsWith('/pengaturan-user')) {
     return NextResponse.redirect(new URL('/unauthorized', req.url));
   }
 
-  // 6. Cek Route berdasarkan centang "Access Rights"
-  let requiredRight = null;
-  for (const [route, right] of Object.entries(routeToRightMap)) {
+  // 5. Check route-level access rights
+  let accessRights = [];
+  try {
+    accessRights = JSON.parse(req.cookies.get('sb-access-rights')?.value || '[]');
+  } catch {}
+
+  for (const [route, right] of Object.entries(ROUTE_RIGHTS)) {
     if (path.startsWith(route) && path !== '/') {
-      requiredRight = right;
+      if (!accessRights.includes(right)) {
+        return NextResponse.redirect(new URL('/unauthorized', req.url));
+      }
       break;
     }
   }
 
-  if (requiredRight && !accessRights.includes(requiredRight)) {
-    return NextResponse.redirect(new URL('/unauthorized', req.url));
-  }
-
-  // Lolos semua proteksi
   return NextResponse.next();
 }
 
-// Konfigurasi route mana saja yang di-intercept oleh Middleware
 export const config = {
   matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
 };
+

@@ -8,6 +8,20 @@ import { useAuth } from './AuthProvider';
 import { supabase } from '@/lib/supabase';
 import { useToast } from './Toast';
 
+// ── Constants (module-level, not recreated per render) ─────
+const ROUTE_RIGHTS = {
+  '/belanja/baru': 'Belanja',
+  '/inventaris': 'Inventaris',
+  '/barang-keluar': 'Barang Keluar',
+  '/riwayat-stok': 'Riwayat Stok',
+  '/kerusakan': 'Kerusakan',
+  '/laporan': 'Laporan',
+};
+
+function cleanRole(role) {
+  return role ? role.toLowerCase().replace(/[\s_-]+/g, '') : '';
+}
+
 const menuItems = [
   {
     label: 'Dashboard',
@@ -96,13 +110,18 @@ export default function Sidebar() {
   const { user, userProfile } = useAuth();
   const { addToast } = useToast();
 
+  // Pre-compute role checks once (not per menu item)
+  const userRole = cleanRole(userProfile?.role);
+  const isAdmin = userRole === 'superadmin' || userRole === 'admin';
+  const isSuperAdmin = userRole === 'superadmin';
+  const userRights = userProfile?.access_rights || [];
+
   const isActive = (item) => {
-    const href = item.href;
-    if (href === '/') return pathname === '/';
+    if (item.href === '/') return pathname === '/';
     if (item.matchPaths) {
       return item.matchPaths.some((p) => pathname.startsWith(p));
     }
-    return pathname.startsWith(href);
+    return pathname.startsWith(item.href);
   };
 
   const handleLogout = async () => {
@@ -171,22 +190,10 @@ export default function Sidebar() {
           <ul className={styles.menuList}>
             {menuItems.map((item) => {
               const active = isActive(item);
-              
-              // Validate dynamic rights
-              const cleanRole = userProfile?.role ? userProfile.role.toLowerCase().replace(/[\s_-]+/g, '') : '';
-              const isAdmin = cleanRole === 'superadmin' || cleanRole === 'admin';
-              const routeToRightMap = {
-                '/belanja/baru': 'Belanja',
-                '/inventaris': 'Inventaris',
-                '/barang-keluar': 'Barang Keluar',
-                '/riwayat-stok': 'Riwayat Stok',
-                '/kerusakan': 'Kerusakan',
-                '/laporan': 'Laporan'
-              };
-              const reqRight = routeToRightMap[item.href];
-              
-              // Hide menu if user implies standard staff/kepsek and lacks required module badge
-              if (!isAdmin && reqRight && !(userProfile?.access_rights || []).includes(reqRight)) {
+              const reqRight = ROUTE_RIGHTS[item.href];
+
+              // Hide menu if non-admin lacks required access right
+              if (!isAdmin && reqRight && !userRights.includes(reqRight)) {
                 return null;
               }
 
@@ -206,7 +213,7 @@ export default function Sidebar() {
             })}
 
             {/* Manajemen User - Super Admin Only */}
-            {userProfile?.role && userProfile.role.toLowerCase().replace(/[\s_-]+/g, '') === 'superadmin' && (
+            {isSuperAdmin && (
               <li key="/pengaturan-user" style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--color-border)' }}>
                 <p className={styles.navLabel} style={{ marginBottom: '8px', paddingLeft: '4px', fontSize: '11px', fontWeight: 700, color: 'var(--color-text-muted)' }}>ADMIN</p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
@@ -252,7 +259,7 @@ export default function Sidebar() {
             <div className={styles.footerUserInfo}>
               <span className={styles.footerUserName} style={{ textTransform: 'capitalize' }}>{userProfile?.full_name || userName}</span>
               <span className={styles.footerUserRole} style={{ textTransform: 'capitalize' }}>
-                {userProfile ? (userProfile.role && userProfile.role.toLowerCase().replace(/[\s_-]+/g, '') === 'superadmin' ? 'Super Admin' : userProfile.role.replace('_', ' ')) : 'Staff'}
+                {isSuperAdmin ? 'Super Admin' : (userProfile?.role?.replace('_', ' ') || 'Staff')}
               </span>
             </div>
           </div>

@@ -1,26 +1,9 @@
 'use server'
 
-import { createClient } from '@supabase/supabase-js';
+import { getAdminClient } from '@/lib/supabase';
 import { isServerAdmin } from '@/lib/serverAuth';
-
 import { logActivity } from '@/lib/activityLog';
 
-// Admin client requires SUPABASE_SERVICE_ROLE_KEY to bypass RLS when necessary
-const getAdminClient = () => {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!serviceRoleKey) {
-    throw new Error('SUPABASE_SERVICE_ROLE_KEY is required.');
-  }
-
-  return createClient(supabaseUrl, serviceRoleKey, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
-  });
-};
 
 export async function submitBarangKeluarAction(payload) {
   try {

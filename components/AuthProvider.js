@@ -6,6 +6,39 @@ import { useRouter, usePathname } from 'next/navigation';
 
 export const AuthContext = createContext({});
 
+// ── Cookie Helpers ──────────────────────────────────────────
+const COOKIE_MAX_AGE = 3600 * 24 * 7; // 7 days
+
+function setCookies(profile, user) {
+  document.cookie = `sb-user-id=${user.id}; path=/; max-age=${COOKIE_MAX_AGE}`;
+  document.cookie = `sb-user-name=${encodeURIComponent(profile.full_name || user.email.split('@')[0])}; path=/; max-age=${COOKIE_MAX_AGE}`;
+  document.cookie = `sb-user-role=${profile.role || ''}; path=/; max-age=${COOKIE_MAX_AGE}`;
+  document.cookie = `sb-access-rights=${JSON.stringify(profile.access_rights || [])}; path=/; max-age=${COOKIE_MAX_AGE}`;
+}
+
+function clearCookies() {
+  const expired = 'expires=Thu, 01 Jan 1970 00:00:00 GMT';
+  ['sb-user-id', 'sb-user-name', 'sb-user-role', 'sb-access-rights'].forEach((name) => {
+    document.cookie = `${name}=; path=/; ${expired}`;
+  });
+}
+
+// ── Profile Fetch ──────────────────────────────────────────
+async function fetchProfile(userId) {
+  if (!userId) return null;
+  try {
+    const { data } = await supabase
+      .from('user_profiles')
+      .select('*')
+      .eq('id', userId)
+      .single();
+    return data;
+  } catch {
+    return null;
+  }
+}
+
+// ── Provider ──────────────────────────────────────────────
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
@@ -13,113 +46,75 @@ export const AuthProvider = ({ children }) => {
   const router = useRouter();
   const pathname = usePathname();
 
-  const fetchProfile = async (userId) => {
-    if (!userId) return null;
-    try {
-      const { data } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
-      return data;
-    } catch {
-      return null;
-    }
-  };
-
   useEffect(() => {
     let mounted = true;
 
-    // Failsafe Timeout: Force stop loading if Supabase hangs (HMR lock bug)
+    // Failsafe: Force stop loading if Supabase hangs (reduced from 4s → 2s)
     const failsafe = setTimeout(() => {
       if (mounted && loading) {
-        console.warn("Auth check takes too long. Forcing load completion.");
+        console.warn('[Auth] Failsafe: forcing load completion');
         setLoading(false);
       }
-    }, 4000);
+    }, 2000);
 
-    // Check active sessions and sets the user
+    const finishLoading = () => {
+      if (mounted) {
+        setLoading(false);
+        clearTimeout(failsafe);
+      }
+    };
+
+    // Handles both initial load and auth state changes
+    const handleUser = async (currentUser) => {
+      if (!mounted) return;
+      setUser(currentUser);
+
+      if (!currentUser) {
+        setUserProfile(null);
+        clearCookies();
+        finishLoading();
+        return;
+      }
+
+      // 1. Instant load from cache (login page already pre-cached this)
+      const cacheKey = 'profile_' + currentUser.id;
+      const cached = localStorage.getItem(cacheKey);
+      if (cached && mounted) {
+        const cachedProfile = JSON.parse(cached);
+        setUserProfile(cachedProfile);
+        setCookies(cachedProfile, currentUser);
+        finishLoading();
+      }
+
+      // 2. Background revalidation (always fetch latest)
+      const profile = await fetchProfile(currentUser.id);
+      if (!mounted) return;
+
+      setUserProfile(profile);
+      if (profile) {
+        localStorage.setItem(cacheKey, JSON.stringify(profile));
+        setCookies(profile, currentUser);
+      }
+      if (!cached) finishLoading(); // Only finish here if we had no cache
+    };
+
+    // Init: check active session
     const initAuth = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        if (!mounted) return;
-
-        const currentUser = session?.user ?? null;
-        setUser(currentUser);
-        
-        if (currentUser) {
-          // 1. Instant optimistic load from cache
-          const cached = localStorage.getItem('profile_' + currentUser.id);
-          if (cached && mounted) {
-            setUserProfile(JSON.parse(cached));
-            setLoading(false);
-            clearTimeout(failsafe);
-          }
-
-          // 2. Background revalidation
-          fetchProfile(currentUser.id).then((profile) => {
-            if (mounted) {
-              setUserProfile(profile);
-              if (profile) localStorage.setItem('profile_' + currentUser.id, JSON.stringify(profile));
-              
-              if (!cached) {
-                setLoading(false);
-                clearTimeout(failsafe);
-              }
-            }
-          });
-        } else {
-          if (mounted) {
-            setUserProfile(null);
-            setLoading(false);
-            clearTimeout(failsafe);
-          }
-        }
+        await handleUser(session?.user ?? null);
       } catch (err) {
-        console.error("Auth init error:", err);
+        console.error('[Auth] Init error:', err);
         if (mounted) setLoading(false);
       }
     };
 
     initAuth();
 
-    // Listen for changes on auth state (logged in, signed out, etc.)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (!mounted) return;
-      
-      const currentUser = session?.user ?? null;
-      setUser(currentUser);
-      
-      if (currentUser) {
-        const cached = localStorage.getItem('profile_' + currentUser.id);
-        if (cached && mounted) setUserProfile(JSON.parse(cached));
-
-        fetchProfile(currentUser.id).then((profile) => {
-          if (mounted) {
-            setUserProfile(profile);
-            if (profile) {
-              localStorage.setItem('profile_' + currentUser.id, JSON.stringify(profile));
-              // Set Cookie for Next.js Middleware Route Protection
-              document.cookie = `sb-user-id=${currentUser.id}; path=/; max-age=${3600*24*7}`;
-              document.cookie = `sb-user-name=${encodeURIComponent(profile.full_name || currentUser.email.split('@')[0])}; path=/; max-age=${3600*24*7}`;
-              document.cookie = `sb-user-role=${profile.role || ''}; path=/; max-age=${3600*24*7}`;
-              document.cookie = `sb-access-rights=${JSON.stringify(profile.access_rights || [])}; path=/; max-age=${3600*24*7}`;
-            }
-            setLoading(false);
-          }
-        });
-      } else {
-        if (mounted) {
-          setUserProfile(null);
-          // Delete Cookies for Next.js Middleware
-          document.cookie = `sb-user-id=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
-          document.cookie = `sb-user-name=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
-          document.cookie = `sb-user-role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
-          document.cookie = `sb-access-rights=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
-          setLoading(false);
-        }
-      }
-    });
+    // Listen for auth state changes (login, logout, token refresh)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (_event, session) => handleUser(session?.user ?? null)
+    );
 
     return () => {
       mounted = false;
@@ -130,34 +125,33 @@ export const AuthProvider = ({ children }) => {
 
   // Watch auth state vs current path for redirection
   useEffect(() => {
-    if (!loading) {
-      if (!user && pathname !== '/login') {
-        router.push('/login');
-      } else if (user && pathname === '/login') {
-        router.push('/');
-      }
+    if (loading) return;
+    if (!user && pathname !== '/login') {
+      router.push('/login');
+    } else if (user && pathname === '/login') {
+      router.push('/');
     }
   }, [user, loading, pathname, router]);
 
   return (
     <AuthContext.Provider value={{ user, userProfile, loading }}>
       {!loading ? children : (
-        <div style={{ 
-          height: '100vh', 
-          display: 'flex', 
-          alignItems: 'center', 
+        <div style={{
+          height: '100vh',
+          display: 'flex',
+          alignItems: 'center',
           justifyContent: 'center',
           flexDirection: 'column',
           gap: '16px',
-          background: '#f8fafc' 
+          background: '#f8fafc'
         }}>
-          <div className="spinner" style={{ 
-            width: '40px', 
-            height: '40px', 
-            border: '4px solid #e2e8f0', 
-            borderTopColor: '#2563eb', 
-            borderRadius: '50%', 
-            animation: 'spin 1s linear infinite' 
+          <div className="spinner" style={{
+            width: '40px',
+            height: '40px',
+            border: '4px solid #e2e8f0',
+            borderTopColor: '#2563eb',
+            borderRadius: '50%',
+            animation: 'spin 1s linear infinite'
           }} />
           <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
           <p style={{ color: '#64748b', fontSize: '14px', fontWeight: '500' }}>Menyiapkan aplikasi...</p>
@@ -168,3 +162,4 @@ export const AuthProvider = ({ children }) => {
 };
 
 export const useAuth = () => useContext(AuthContext);
+

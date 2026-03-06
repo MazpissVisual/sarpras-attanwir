@@ -6,6 +6,15 @@ import { useRouter } from 'next/navigation';
 import styles from './page.module.css';
 import { useToast } from '@/components/Toast';
 
+// ── Helper: set auth cookies for middleware ──────────────────
+function setAuthCookies(profile, user) {
+  const maxAge = 3600 * 24 * 7; // 7 days
+  document.cookie = `sb-user-id=${user.id}; path=/; max-age=${maxAge}`;
+  document.cookie = `sb-user-name=${encodeURIComponent(profile.full_name || user.email.split('@')[0])}; path=/; max-age=${maxAge}`;
+  document.cookie = `sb-user-role=${profile.role || ''}; path=/; max-age=${maxAge}`;
+  document.cookie = `sb-access-rights=${JSON.stringify(profile.access_rights || [])}; path=/; max-age=${maxAge}`;
+}
+
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -19,6 +28,7 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
+      // 1. Authenticate
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -26,11 +36,25 @@ export default function LoginPage() {
 
       if (error) throw error;
 
+      // 2. Fetch profile immediately (parallel with UI update)
+      const profilePromise = supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('id', data.user.id)
+        .single();
+
       setIsSuccess(true);
       addToast('Login berhasil! Selamat datang.', 'success');
-      
-      // Do not stop loading here, let it redirect natively
-      router.push('/');
+
+      // 3. Pre-set cookies + cache profile BEFORE redirect
+      const { data: profile } = await profilePromise;
+      if (profile) {
+        setAuthCookies(profile, data.user);
+        localStorage.setItem('profile_' + data.user.id, JSON.stringify(profile));
+      }
+
+      // 4. Redirect — middleware will see cookies immediately
+      router.replace('/');
     } catch (error) {
       setLoading(false);
       setIsSuccess(false);
@@ -99,3 +123,4 @@ export default function LoginPage() {
     </div>
   );
 }
+
