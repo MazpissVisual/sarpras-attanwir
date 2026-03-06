@@ -46,6 +46,7 @@
 
 .tableWrapper {
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .clickableRow {

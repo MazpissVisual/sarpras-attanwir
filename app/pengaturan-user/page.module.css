@@ -334,3 +334,81 @@
 }
 .submitBtn:hover { background: #1d4ed8; }
 .submitBtn:disabled { background: #94a3b8; cursor: not-allowed; }
+
+/* ========== Responsive ========== */
+@media (max-width: 1024px) {
+  .pageContainer {
+    padding: 16px;
+  }
+
+  .headerArea {
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .addUserBtn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .tableContainer {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .userTable {
+    min-width: 700px;
+  }
+
+  .userTable th,
+  .userTable td {
+    padding: 14px 16px;
+  }
+
+  .modal {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  .pageContainer {
+    padding: 12px;
+  }
+
+  .titleBlock h1 {
+    font-size: 20px;
+  }
+
+  .userTable th,
+  .userTable td {
+    padding: 12px 10px;
+    font-size: 12px;
+  }
+
+  .actionsBox {
+    gap: 8px;
+  }
+
+  .modalBody {
+    padding: 16px;
+  }
+
+  .modalHeader {
+    padding: 16px;
+  }
+
+  .modalFooter {
+    padding: 16px;
+    flex-direction: column-reverse;
+    gap: 10px;
+  }
+
+  .cancelBtn,
+  .submitBtn {
+    width: 100%;
+    text-align: center;
+    justify-content: center;
+  }
+}
+

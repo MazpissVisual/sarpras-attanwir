@@ -483,5 +483,43 @@
   .searchBox input {
     font-size: 15px;
   }
+  .tabs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
   .formRow { grid-template-columns: 1fr; }
+  .modal { max-width: 100%; }
+  .tableResponsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
 }
+
+@media (max-width: 640px) {
+  .tab {
+    padding: 7px 12px;
+    font-size: 12px;
+    gap: 5px;
+  }
+  .colReporter { min-width: 160px; }
+  .colDesc { min-width: 180px; }
+  .formActions {
+    flex-direction: column-reverse;
+  }
+  .formActions button {
+    width: 100%;
+    justify-content: center;
+  }
+  .photoAddButtons {
+    flex-direction: column;
+  }
+  .form {
+    padding: 16px;
+  }
+  .modalHeader {
+    padding: 16px;
+  }
+}
+

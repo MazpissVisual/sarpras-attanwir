@@ -451,7 +451,34 @@
 }
 
 @media (max-width: 640px) {
-  .tableWrap { overflow-x: auto; }
+  .tableWrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
   .table { min-width: 700px; }
   .modalCard { max-width: 100%; }
+  .modalHead {
+    padding: 16px;
+  }
+  .modalBody {
+    padding: 16px;
+  }
+  .pagination {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 10px;
+  }
+  .pageButtons {
+    width: 100%;
+    justify-content: center;
+  }
+  .dataKey {
+    min-width: 100px;
+    font-size: 12px;
+  }
+  .dataVal {
+    font-size: 12px;
+  }
 }
+

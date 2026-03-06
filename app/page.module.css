@@ -843,6 +843,27 @@
 
 @media (max-width: 640px) {
   .dashboard { padding: 0 16px 32px; }
+  .topBar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .topBarRight {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .filterGroup {
+    width: 100%;
+  }
+  .filterSelect {
+    flex: 1;
+    width: 100%;
+  }
+  .refreshBtn {
+    width: 100%;
+    justify-content: center;
+  }
   .kpiGrid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
   .kpiValue { font-size: 18px; }
   .kpiIcon { width: 32px; height: 32px; }
@@ -850,9 +871,14 @@
   .quickAction { padding: 12px 14px; }
   .qaIcon { width: 34px; height: 34px; }
   .qaLabel { font-size: 12px; }
+  .chartCard { padding: 16px; }
+  .chartHead h3 { font-size: 14px; }
+  .sectionCard { padding: 16px; }
+  .tableCard { padding: 16px; }
 }
 
 @media (max-width: 400px) {
   .kpiGrid { grid-template-columns: 1fr; }
   .quickActions { grid-template-columns: 1fr; }
 }
+

@@ -578,3 +578,42 @@
     grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
   }
 }
+
+@media (max-width: 480px) {
+  .card {
+    padding: 16px;
+  }
+  .cardHead {
+    margin-bottom: 14px;
+    padding-bottom: 12px;
+  }
+  .summaryAmounts {
+    grid-template-columns: 1fr;
+  }
+  .amountBoxHighlight {
+    grid-column: span 1;
+  }
+  .amountValue {
+    font-size: 16px;
+  }
+  .infoRow {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+  }
+  .infoValue {
+    text-align: left;
+  }
+  .uploadBtnGroup {
+    grid-template-columns: 1fr;
+  }
+  .modal {
+    padding: 20px;
+  }
+  .modalSisa {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+}
+

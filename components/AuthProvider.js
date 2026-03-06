@@ -49,13 +49,13 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     let mounted = true;
 
-    // Failsafe: Force stop loading if Supabase hangs (reduced from 4s → 2s)
+    // Failsafe: Force stop loading if Supabase hangs
     const failsafe = setTimeout(() => {
       if (mounted && loading) {
         console.warn('[Auth] Failsafe: forcing load completion');
         setLoading(false);
       }
-    }, 2000);
+    }, 4000);
 
     const finishLoading = () => {
       if (mounted) {
@@ -64,45 +64,41 @@ export const AuthProvider = ({ children }) => {
       }
     };
 
-    // Handles both initial load and auth state changes
-    const handleUser = async (currentUser) => {
-      if (!mounted) return;
-      setUser(currentUser);
-
-      if (!currentUser) {
-        setUserProfile(null);
-        clearCookies();
-        finishLoading();
-        return;
-      }
-
-      // 1. Instant load from cache (login page already pre-cached this)
-      const cacheKey = 'profile_' + currentUser.id;
-      const cached = localStorage.getItem(cacheKey);
-      if (cached && mounted) {
-        const cachedProfile = JSON.parse(cached);
-        setUserProfile(cachedProfile);
-        setCookies(cachedProfile, currentUser);
-        finishLoading();
-      }
-
-      // 2. Background revalidation (always fetch latest)
-      const profile = await fetchProfile(currentUser.id);
-      if (!mounted) return;
-
-      setUserProfile(profile);
-      if (profile) {
-        localStorage.setItem(cacheKey, JSON.stringify(profile));
-        setCookies(profile, currentUser);
-      }
-      if (!cached) finishLoading(); // Only finish here if we had no cache
-    };
-
     // Init: check active session
     const initAuth = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        await handleUser(session?.user ?? null);
+        if (!mounted) return;
+
+        const currentUser = session?.user ?? null;
+        setUser(currentUser);
+
+        if (currentUser) {
+          // 1. Instant load from cache
+          const cacheKey = 'profile_' + currentUser.id;
+          const cached = localStorage.getItem(cacheKey);
+          if (cached && mounted) {
+            const cachedProfile = JSON.parse(cached);
+            setUserProfile(cachedProfile);
+            setCookies(cachedProfile, currentUser);
+            finishLoading();
+          }
+
+          // 2. Background revalidation — NON-BLOCKING with .then()
+          fetchProfile(currentUser.id).then((profile) => {
+            if (!mounted) return;
+            setUserProfile(profile);
+            if (profile) {
+              localStorage.setItem(cacheKey, JSON.stringify(profile));
+              setCookies(profile, currentUser);
+            }
+            if (!cached) finishLoading();
+          });
+        } else {
+          setUserProfile(null);
+          clearCookies();
+          finishLoading();
+        }
       } catch (err) {
         console.error('[Auth] Init error:', err);
         if (mounted) setLoading(false);
@@ -113,7 +109,33 @@ export const AuthProvider = ({ children }) => {
 
     // Listen for auth state changes (login, logout, token refresh)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => handleUser(session?.user ?? null)
+      async (_event, session) => {
+        if (!mounted) return;
+
+        const currentUser = session?.user ?? null;
+        setUser(currentUser);
+
+        if (currentUser) {
+          const cacheKey = 'profile_' + currentUser.id;
+          const cached = localStorage.getItem(cacheKey);
+          if (cached && mounted) setUserProfile(JSON.parse(cached));
+
+          // NON-BLOCKING fetch
+          fetchProfile(currentUser.id).then((profile) => {
+            if (!mounted) return;
+            setUserProfile(profile);
+            if (profile) {
+              localStorage.setItem(cacheKey, JSON.stringify(profile));
+              setCookies(profile, currentUser);
+            }
+            setLoading(false);
+          });
+        } else {
+          setUserProfile(null);
+          clearCookies();
+          setLoading(false);
+        }
+      }
     );
 
     return () => {
