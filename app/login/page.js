@@ -67,7 +67,7 @@ export default function LoginPage() {
       <div className={styles.loginBox}>
         <div className={styles.header}>
           <div className={styles.logo}>
-            <img src="/icons/logo.svg" alt="Logo" width="48" height="48" style={{ objectFit: 'contain' }} />
+            <img src="/icons/logo.svg" alt="Logo" width="80" height="80" style={{ objectFit: 'contain' }} />
           </div>
           <h1>Sarpras Digital</h1>
           <p>Pondok Pesantren Attanwir</p>

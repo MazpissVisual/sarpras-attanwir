@@ -163,7 +163,7 @@ export default function Sidebar() {
       <aside className={`${styles.sidebar} ${mobileOpen ? styles.open : ''}`}>
         <div className={styles.brand}>
           <div className={styles.logoIcon}>
-            <img src="/icons/logo.svg" alt="Logo" width="28" height="28" style={{ objectFit: 'contain' }} />
+            <img src="/icons/logo.svg" alt="Logo" width="42" height="42" style={{ objectFit: 'contain' }} />
           </div>
           <div className={styles.brandInfo}>
             <span className={styles.brandText}>Sarpras Digital</span>
