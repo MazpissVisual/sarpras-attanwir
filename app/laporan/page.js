@@ -8,6 +8,7 @@ import { useToast } from '@/components/Toast';
 import { AuthContext } from '@/components/AuthProvider';
 import { supabase } from '@/lib/supabase';
 import { exportTransactionsToExcel } from '@/lib/exportExcel';
+import { deleteTransaksiAction } from './[id]/actions';
 import styles from './page.module.css';
 
 const MONTHS = [
@@ -31,6 +32,8 @@ export default function LaporanPage() {
   const [exporting, setExporting] = useState(false);
   const cleanRole = userProfile?.role ? userProfile.role.toLowerCase().replace(/[\s_-]+/g, '') : '';
   const isReadOnly = !['superadmin', 'admin', 'staff'].includes(cleanRole);
+  const isAdmin = ['superadmin', 'admin'].includes(cleanRole);
+  const [deletingId, setDeletingId] = useState(null);
 
   // Summary
   const [summary, setSummary] = useState({ total: 0, cash: 0, transfer: 0, utang: 0, count: 0 });
@@ -45,13 +48,11 @@ export default function LaporanPage() {
 
       if (tahun !== 'all') {
         if (bulan !== 'all') {
-          // Use YYYY-MM-DD format to filter by tanggal
           const startDate = `${tahun}-${String(bulan + 1).padStart(2, '0')}-01`;
           const lastDay = new Date(tahun, bulan + 1, 0).getDate();
           const endDate = `${tahun}-${String(bulan + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
           query = query.gte('tanggal', startDate).lte('tanggal', endDate);
         } else {
-          // All months in a specific year
           const startDate = `${tahun}-01-01`;
           const endDate = `${tahun}-12-31`;
           query = query.gte('tanggal', startDate).lte('tanggal', endDate);
@@ -59,19 +60,13 @@ export default function LaporanPage() {
       }
 
       const { data, error } = await query;
-
       if (error) throw error;
-
       setTransactions(data || []);
 
-      // Calculate summary
       const txs = data || [];
       const total = txs.reduce((s, t) => s + (parseFloat(t.total_bayar) || 0), 0);
       const cash = txs.filter((t) => t.metode_bayar === 'cash').reduce((s, t) => s + (parseFloat(t.total_bayar) || 0), 0);
       const transfer = txs.filter((t) => t.metode_bayar === 'transfer').reduce((s, t) => s + (parseFloat(t.total_bayar) || 0), 0);
-
-      // Utang = sisa tagihan aktual (bukan total_bayar mentah)
-      // Pakai sisa_tagihan jika ada, fallback ke total_bayar untuk transaksi tanpa pembayaran
       const utang = txs
         .filter((t) => !t.status_lunas)
         .reduce((s, t) => {
@@ -92,6 +87,20 @@ export default function LaporanPage() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  const handleDeleteTx = async (e, txId, txJudul) => {
+    e.stopPropagation();
+    if (!confirm(`Hapus transaksi "${txJudul}"?\n\nSemua data terkait (item, pembayaran, nota) akan ikut terhapus secara permanen.`)) return;
+    setDeletingId(txId);
+    const res = await deleteTransaksiAction(txId);
+    if (res.success) {
+      addToast('Transaksi berhasil dihapus.', 'success');
+      fetchData();
+    } else {
+      addToast(res.error || 'Gagal menghapus.', 'error');
+    }
+    setDeletingId(null);
+  };
 
   const handleExport = async () => {
     if (transactions.length === 0) {
@@ -216,6 +225,7 @@ export default function LaporanPage() {
                       <th>Metode</th>
                       <th>Total</th>
                       <th>Status</th>
+                      {isAdmin && <th style={{ width: 48 }}>Aksi</th>}
                     </tr>
                   </thead>
                   <tbody>
@@ -241,6 +251,22 @@ export default function LaporanPage() {
                             {tx.status_lunas ? 'Lunas' : 'Belum'}
                           </span>
                         </td>
+                        {isAdmin && (
+                          <td>
+                            <button
+                              className={styles.deleteRowBtn}
+                              onClick={(e) => handleDeleteTx(e, tx.id, tx.judul)}
+                              disabled={deletingId === tx.id}
+                              title="Hapus transaksi"
+                            >
+                              {deletingId === tx.id ? '…' : (
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                                </svg>
+                              )}
+                            </button>
+                          </td>
+                        )}
                       </tr>
                     ))}
                   </tbody>

@@ -4,7 +4,7 @@ import { useState, useContext, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { AuthContext } from '@/components/AuthProvider';
 import { useToast } from '@/components/Toast';
-import { addPembayaranAction, deletePembayaranAction, uploadNotaAction, deleteNotaAction } from './actions';
+import { addPembayaranAction, deletePembayaranAction, uploadNotaAction, deleteNotaAction, updateTransaksiAction, updateTransactionItemAction, deleteTransaksiAction } from './actions';
 import { compressFileForUpload } from '@/lib/imageCompression';
 import styles from './page.module.css';
 
@@ -16,6 +16,18 @@ const formatRp = (n) =>
 
 const formatDate = (d) =>
   d ? new Date(d).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '-';
+
+const KATEGORI_OPTIONS = [
+  { value: 'listrik', label: 'Listrik' },
+  { value: 'bangunan', label: 'Bangunan' },
+  { value: 'atk', label: 'ATK' },
+  { value: 'kebersihan', label: 'Kebersihan' },
+  { value: 'elektronik', label: 'Elektronik' },
+  { value: 'furniture', label: 'Furniture' },
+  { value: 'lainnya', label: 'Lainnya' },
+];
+
+const SATUAN_OPTIONS = ['pcs', 'dus', 'lusin', 'rim', 'meter', 'kg', 'liter', 'set', 'unit', 'roll', 'lembar', 'buah'];
 
 const StatusBadge = ({ status }) => {
   const map = {
@@ -60,6 +72,25 @@ export default function DetailClient({ initialData, id }) {
   const [deletingPayId, setDeletingPayId] = useState(null);
   const [deletingNotaId, setDeletingNotaId] = useState(null);
 
+  // ===== EDIT TRANSAKSI STATE =====
+  const [showEditTxModal, setShowEditTxModal] = useState(false);
+  const [editTxForm, setEditTxForm] = useState({
+    judul: transaksi.judul || '',
+    toko: transaksi.toko || '',
+    tanggal: transaksi.tanggal ? new Date(transaksi.tanggal).toISOString().split('T')[0] : '',
+    kategori: transaksi.kategori || 'lainnya',
+    metode_bayar: transaksi.metode_bayar || 'cash',
+  });
+  const [editTxLoading, setEditTxLoading] = useState(false);
+
+  // ===== EDIT ITEM STATE =====
+  const [showEditItemModal, setShowEditItemModal] = useState(false);
+  const [editItemForm, setEditItemForm] = useState({ id: '', nama_barang: '', jumlah: 1, satuan: 'pcs', harga_satuan: '' });
+  const [editItemLoading, setEditItemLoading] = useState(false);
+
+  // ===== DELETE TRANSAKSI STATE =====
+  const [deletingTx, setDeletingTx] = useState(false);
+
   // ----- Tambah Pembayaran -----
   const handleAddPayment = async (e) => {
     e.preventDefault();
@@ -100,7 +131,6 @@ export default function DetailClient({ initialData, id }) {
     if (!uploadFile) return addToast('Pilih file dahulu', 'error');
     setUploadLoading(true);
     try {
-      // Compress image before upload (non-images like PDF are passed through)
       const compressedFile = await compressFileForUpload(uploadFile, 300);
       const fd = new FormData();
       fd.append('file', compressedFile);
@@ -133,6 +163,61 @@ export default function DetailClient({ initialData, id }) {
     setDeletingNotaId(null);
   };
 
+  // ----- Edit Transaksi -----
+  const handleEditTx = async (e) => {
+    e.preventDefault();
+    setEditTxLoading(true);
+    const res = await updateTransaksiAction(id, editTxForm);
+    if (res.success) {
+      addToast('Informasi transaksi berhasil diperbarui!', 'success');
+      setShowEditTxModal(false);
+      router.refresh();
+    } else {
+      addToast(res.error, 'error');
+    }
+    setEditTxLoading(false);
+  };
+
+  // ----- Edit Item -----
+  const openEditItem = (item) => {
+    setEditItemForm({
+      id: item.id,
+      nama_barang: item.nama_barang,
+      jumlah: item.jumlah,
+      satuan: item.satuan || 'pcs',
+      harga_satuan: item.harga_satuan,
+    });
+    setShowEditItemModal(true);
+  };
+
+  const handleEditItem = async (e) => {
+    e.preventDefault();
+    setEditItemLoading(true);
+    const res = await updateTransactionItemAction(editItemForm.id, id, editItemForm);
+    if (res.success) {
+      addToast('Data barang berhasil diperbarui!', 'success');
+      setShowEditItemModal(false);
+      router.refresh();
+    } else {
+      addToast(res.error, 'error');
+    }
+    setEditItemLoading(false);
+  };
+
+  // ----- Hapus Transaksi -----
+  const handleDeleteTx = async () => {
+    if (!confirm('⚠️ PERINGATAN: Anda yakin ingin menghapus transaksi ini?\n\nSemua data termasuk item barang, riwayat pembayaran, dan nota akan ikut terhapus secara permanen.')) return;
+    setDeletingTx(true);
+    const res = await deleteTransaksiAction(id);
+    if (res.success) {
+      addToast('Transaksi berhasil dihapus.', 'success');
+      router.replace('/laporan');
+    } else {
+      addToast(res.error, 'error');
+      setDeletingTx(false);
+    }
+  };
+
   const paidPct = transaksi.total_bayar > 0
     ? Math.min(100, (transaksi.total_dibayar / transaksi.total_bayar) * 100)
     : (transaksi.status_lunas ? 100 : 0);
@@ -152,6 +237,14 @@ export default function DetailClient({ initialData, id }) {
           </div>
           <h2>Informasi Transaksi</h2>
           <StatusBadge status={transaksi.status_pembayaran} />
+          {isAdmin && (
+            <button className={styles.editHeaderBtn} onClick={() => setShowEditTxModal(true)} title="Edit informasi transaksi">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+              </svg>
+            </button>
+          )}
         </div>
 
         <div className={styles.infoGrid}>
@@ -243,6 +336,7 @@ export default function DetailClient({ initialData, id }) {
                   <th style={{ textAlign: 'center' }}>Satuan</th>
                   <th style={{ textAlign: 'right' }}>Harga</th>
                   <th style={{ textAlign: 'right' }}>Subtotal</th>
+                  {isAdmin && <th style={{ width: 48 }}></th>}
                 </tr>
               </thead>
               <tbody>
@@ -254,12 +348,22 @@ export default function DetailClient({ initialData, id }) {
                     <td style={{ textAlign: 'center', color: 'var(--color-text-muted)' }}>{item.satuan}</td>
                     <td style={{ textAlign: 'right' }}>{formatRp(item.harga_satuan)}</td>
                     <td style={{ textAlign: 'right', fontWeight: 700 }}>{formatRp(item.subtotal)}</td>
+                    {isAdmin && (
+                      <td>
+                        <button className={styles.editItemBtn} onClick={() => openEditItem(item)} title="Edit item">
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                          </svg>
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
               <tfoot>
                 <tr>
-                  <td colSpan={5} style={{ textAlign: 'right', fontWeight: 700, padding: '12px 16px', borderTop: '2px solid var(--color-border)', color: 'var(--color-text-secondary)' }}>
+                  <td colSpan={isAdmin ? 6 : 5} style={{ textAlign: 'right', fontWeight: 700, padding: '12px 16px', borderTop: '2px solid var(--color-border)', color: 'var(--color-text-secondary)' }}>
                     Grand Total:
                   </td>
                   <td style={{ textAlign: 'right', fontWeight: 800, color: 'var(--color-primary)', padding: '12px 16px', borderTop: '2px solid var(--color-border)', fontSize: 15 }}>
@@ -378,13 +482,11 @@ export default function DetailClient({ initialData, id }) {
         {/* Upload form */}
         {isAdmin && (
           <form onSubmit={handleUploadNota} className={styles.uploadForm}>
-            {/* Hidden inputs */}
             <input ref={fileInputRef} type="file" accept="image/*,application/pdf" style={{ display: 'none' }}
               onChange={(e) => setUploadFile(e.target.files[0])} />
             <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }}
               onChange={(e) => setUploadFile(e.target.files[0])} />
 
-            {/* Preview / Pilih sumber */}
             {uploadFile ? (
               <div className={styles.uploadPreview}>
                 {uploadFile.type.startsWith('image/') ? (
@@ -469,6 +571,28 @@ export default function DetailClient({ initialData, id }) {
         )}
       </div>
 
+      {/* ========== DANGER ZONE: HAPUS TRANSAKSI ========== */}
+      {isAdmin && (
+        <div className={`${styles.card} ${styles.dangerZone}`}>
+          <div className={styles.dangerZoneContent}>
+            <div>
+              <h3 className={styles.dangerTitle}>Hapus Transaksi</h3>
+              <p className={styles.dangerDesc}>Menghapus transaksi ini akan menghapus semua data terkait secara permanen termasuk item barang, riwayat pembayaran, dan nota.</p>
+            </div>
+            <button className="btn btnDanger" onClick={handleDeleteTx} disabled={deletingTx} style={{ whiteSpace: 'nowrap' }}>
+              {deletingTx ? 'Menghapus...' : (
+                <>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                  </svg>
+                  Hapus Transaksi
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ========== MODAL TAMBAH PEMBAYARAN ========== */}
       {showPayModal && (
         <div className={styles.modalOverlay} onClick={(e) => e.target === e.currentTarget && setShowPayModal(false)}>
@@ -524,6 +648,114 @@ export default function DetailClient({ initialData, id }) {
                 <button type="button" className="btn btnSecondary" onClick={() => setShowPayModal(false)}>Batal</button>
                 <button type="submit" className="btn btnSuccess" disabled={payLoading}>
                   {payLoading ? '⏳ Memproses...' : '✓ Konfirmasi Pembayaran'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========== MODAL EDIT TRANSAKSI ========== */}
+      {showEditTxModal && (
+        <div className={styles.modalOverlay} onClick={(e) => e.target === e.currentTarget && setShowEditTxModal(false)}>
+          <div className={styles.modal}>
+            <div className={styles.modalHead}>
+              <h3>Edit Informasi Transaksi</h3>
+              <button className={styles.modalClose} onClick={() => setShowEditTxModal(false)}>×</button>
+            </div>
+            <form onSubmit={handleEditTx} className={styles.payForm}>
+              <div className="formGroup">
+                <label className="formLabel">Judul Belanja *</label>
+                <input type="text" className="formInput" required value={editTxForm.judul}
+                  onChange={(e) => setEditTxForm({ ...editTxForm, judul: e.target.value })} />
+              </div>
+              <div className="formGroup">
+                <label className="formLabel">Nama Toko *</label>
+                <input type="text" className="formInput" required value={editTxForm.toko}
+                  onChange={(e) => setEditTxForm({ ...editTxForm, toko: e.target.value })} />
+              </div>
+              <div className={styles.payFormGrid}>
+                <div className="formGroup">
+                  <label className="formLabel">Tanggal</label>
+                  <input type="date" className="formInput" value={editTxForm.tanggal}
+                    onChange={(e) => setEditTxForm({ ...editTxForm, tanggal: e.target.value })} />
+                </div>
+                <div className="formGroup">
+                  <label className="formLabel">Kategori</label>
+                  <select className="formSelect" value={editTxForm.kategori}
+                    onChange={(e) => setEditTxForm({ ...editTxForm, kategori: e.target.value })}>
+                    {KATEGORI_OPTIONS.map(k => <option key={k.value} value={k.value}>{k.label}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div className="formGroup">
+                <label className="formLabel">Metode Pembayaran</label>
+                <select className="formSelect" value={editTxForm.metode_bayar}
+                  onChange={(e) => setEditTxForm({ ...editTxForm, metode_bayar: e.target.value })}>
+                  <option value="cash">Tunai / Cash</option>
+                  <option value="transfer">Transfer Bank</option>
+                  <option value="utang">Utang</option>
+                </select>
+              </div>
+              <div className={styles.modalActions}>
+                <button type="button" className="btn btnSecondary" onClick={() => setShowEditTxModal(false)}>Batal</button>
+                <button type="submit" className="btn btnPrimary" disabled={editTxLoading}>
+                  {editTxLoading ? 'Menyimpan...' : 'Simpan Perubahan'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========== MODAL EDIT ITEM BARANG ========== */}
+      {showEditItemModal && (
+        <div className={styles.modalOverlay} onClick={(e) => e.target === e.currentTarget && setShowEditItemModal(false)}>
+          <div className={styles.modal}>
+            <div className={styles.modalHead}>
+              <h3>Edit Item Barang</h3>
+              <button className={styles.modalClose} onClick={() => setShowEditItemModal(false)}>×</button>
+            </div>
+            <form onSubmit={handleEditItem} className={styles.payForm}>
+              <div className="formGroup">
+                <label className="formLabel">Nama Barang *</label>
+                <input type="text" className="formInput" required value={editItemForm.nama_barang}
+                  onChange={(e) => setEditItemForm({ ...editItemForm, nama_barang: e.target.value })} />
+              </div>
+              <div className={styles.payFormGrid}>
+                <div className="formGroup">
+                  <label className="formLabel">Jumlah</label>
+                  <input type="number" className="formInput" min="1" value={editItemForm.jumlah}
+                    onChange={(e) => setEditItemForm({ ...editItemForm, jumlah: e.target.value })} />
+                </div>
+                <div className="formGroup">
+                  <label className="formLabel">Satuan</label>
+                  <select className="formSelect" value={editItemForm.satuan}
+                    onChange={(e) => setEditItemForm({ ...editItemForm, satuan: e.target.value })}>
+                    {SATUAN_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div className="formGroup">
+                <label className="formLabel">Harga Satuan (Rp)</label>
+                <input type="text" className="formInput"
+                  value={editItemForm.harga_satuan ? Number(editItemForm.harga_satuan).toLocaleString('id-ID') : ''}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, '');
+                    setEditItemForm({ ...editItemForm, harga_satuan: val });
+                  }}
+                  placeholder="0" />
+              </div>
+              <div style={{ background: 'var(--color-border-light)', borderRadius: 'var(--radius-md)', padding: '12px 16px', marginBottom: 8 }}>
+                <span style={{ fontSize: 13, color: 'var(--color-text-muted)' }}>Subtotal: </span>
+                <strong style={{ color: 'var(--color-primary)' }}>
+                  {formatRp((parseInt(editItemForm.jumlah) || 0) * (parseFloat(editItemForm.harga_satuan) || 0))}
+                </strong>
+              </div>
+              <div className={styles.modalActions}>
+                <button type="button" className="btn btnSecondary" onClick={() => setShowEditItemModal(false)}>Batal</button>
+                <button type="submit" className="btn btnPrimary" disabled={editItemLoading}>
+                  {editItemLoading ? 'Menyimpan...' : 'Simpan Perubahan'}
                 </button>
               </div>
             </form>

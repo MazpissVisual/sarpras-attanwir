@@ -627,3 +627,85 @@
   }
 }
 
+/* ================================================
+   EDIT / DELETE BUTTONS
+   ================================================ */
+.editHeaderBtn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  background: transparent;
+  cursor: pointer;
+  color: var(--color-text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+
+.editHeaderBtn:hover {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  border-color: var(--color-primary-subtle);
+}
+
+.editItemBtn {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid var(--color-border);
+  background: transparent;
+  cursor: pointer;
+  color: var(--color-text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+
+.editItemBtn:hover {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  border-color: var(--color-primary-subtle);
+}
+
+/* ================================================
+   DANGER ZONE
+   ================================================ */
+.dangerZone {
+  border-color: #fecaca;
+  background: #fefefe;
+}
+
+.dangerZoneContent {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.dangerTitle {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-danger);
+  margin-bottom: 4px;
+}
+
+.dangerDesc {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+}
+
+@media (max-width: 600px) {
+  .dangerZoneContent {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .dangerZoneContent .btn {
+    width: 100%;
+    justify-content: center;
+  }
+}

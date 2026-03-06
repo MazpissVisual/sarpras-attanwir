@@ -41,10 +41,10 @@ export async function getActivityLogs({
       query = query.ilike('nama_user', `%${filterUser}%`);
     }
     if (filterDateStart) {
-      query = query.gte('created_at', `${filterDateStart}T00:00:00`);
+      query = query.gte('created_at', `${filterDateStart}T00:00:00+07:00`);
     }
     if (filterDateEnd) {
-      query = query.lte('created_at', `${filterDateEnd}T23:59:59`);
+      query = query.lte('created_at', `${filterDateEnd}T23:59:59+07:00`);
     }
 
     // Pagination

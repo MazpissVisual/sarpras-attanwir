@@ -259,3 +259,109 @@ export async function deleteNotaAction(nota_id, transaksi_id) {
     return { success: false, error: err.message };
   }
 }
+
+/**
+ * Update informasi utama transaksi (judul, toko, tanggal, kategori, metode_bayar)
+ */
+export async function updateTransaksiAction(transaksi_id, formData) {
+  try {
+    const isAdmin = await isServerAdmin();
+    if (!isAdmin) return { success: false, error: 'Akses Ditolak: Hanya Admin.' };
+
+    const { judul, toko, tanggal, kategori, metode_bayar } = formData;
+    if (!judul?.trim() || !toko?.trim()) {
+      return { success: false, error: 'Judul dan Toko wajib diisi.' };
+    }
+
+    const admin = getAdminClient();
+    const { error } = await admin.from('transactions').update({
+      judul: judul.trim(),
+      toko: toko.trim(),
+      tanggal: tanggal || undefined,
+      kategori: kategori || undefined,
+      metode_bayar: metode_bayar || undefined,
+    }).eq('id', transaksi_id);
+
+    if (error) throw new Error(error.message);
+
+    revalidatePath(`/laporan/${transaksi_id}`);
+    revalidatePath('/laporan');
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+}
+
+/**
+ * Update item barang dan recalculate total transaksi
+ */
+export async function updateTransactionItemAction(item_id, transaksi_id, formData) {
+  try {
+    const isAdmin = await isServerAdmin();
+    if (!isAdmin) return { success: false, error: 'Akses Ditolak: Hanya Admin.' };
+
+    const { nama_barang, jumlah, satuan, harga_satuan } = formData;
+    if (!nama_barang?.trim()) return { success: false, error: 'Nama barang wajib diisi.' };
+
+    const qty = parseInt(jumlah) || 1;
+    const price = parseFloat(harga_satuan) || 0;
+
+    const admin = getAdminClient();
+
+    // Update item
+    const { error: itemErr } = await admin.from('transaction_items').update({
+      nama_barang: nama_barang.trim(),
+      jumlah: qty,
+      satuan: satuan || 'pcs',
+      harga_satuan: price,
+    }).eq('id', item_id);
+
+    if (itemErr) throw new Error(itemErr.message);
+
+    // Recalculate total_bayar from all items
+    const { data: allItems } = await admin
+      .from('transaction_items')
+      .select('jumlah, harga_satuan')
+      .eq('transaction_id', transaksi_id);
+
+    const newTotal = (allItems || []).reduce((s, i) => s + (i.jumlah * i.harga_satuan), 0);
+
+    const { error: txErr } = await admin.from('transactions').update({
+      total_bayar: newTotal,
+    }).eq('id', transaksi_id);
+
+    if (txErr) throw new Error(txErr.message);
+
+    revalidatePath(`/laporan/${transaksi_id}`);
+    revalidatePath('/laporan');
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+}
+
+/**
+ * Hapus seluruh transaksi beserta items, pembayaran, dan nota
+ */
+export async function deleteTransaksiAction(transaksi_id) {
+  try {
+    const isAdmin = await isServerAdmin();
+    if (!isAdmin) return { success: false, error: 'Akses Ditolak: Hanya Admin.' };
+
+    const admin = getAdminClient();
+
+    // Hapus data terkait terlebih dahulu
+    await admin.from('nota_files').delete().eq('transaction_id', transaksi_id);
+    await admin.from('pembayaran_transaksi').delete().eq('transaction_id', transaksi_id);
+    await admin.from('transaction_items').delete().eq('transaction_id', transaksi_id);
+
+    // Hapus transaksi utama
+    const { error } = await admin.from('transactions').delete().eq('id', transaksi_id);
+    if (error) throw new Error(error.message);
+
+    revalidatePath('/laporan');
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+}
