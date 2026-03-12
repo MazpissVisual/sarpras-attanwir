@@ -97,9 +97,10 @@ Digunakan untuk **melaporkan barang yang rusak** dan memantau status perbaikanny
 
 **Informasi yang dicatat:**
 - Nama barang yang rusak
+- Tempat / Lokasi barang
 - Deskripsi kerusakan
-- Tingkat kerusakan (ringan / sedang / berat)
-- Status penanganan (belum ditangani / sedang diperbaiki / selesai)
+- Foto bukti kerusakan
+- Status penanganan (dilaporkan / diproses / selesai / ditolak)
 
 > **Contoh:** "Proyektor Ruang Guru — Lampu mati, perlu ganti. Status: Sedang diperbaiki."
 
@@ -109,7 +110,11 @@ Digunakan untuk **melaporkan barang yang rusak** dan memantau status perbaikanny
 Digunakan untuk **melihat rekap seluruh data transaksi** belanja dalam periode tertentu.
 
 **Fitur yang tersedia:**
+- Filter pencarian (judul transaksi / toko)
 - Filter berdasarkan bulan dan tahun
+- Filter berdasarkan kategori barang
+- Filter berdasarkan metode pembayaran (Cash / Transfer / Utang)
+- Filter berdasarkan status pembayaran (Lunas / Belum Lunas)
 - Ringkasan total belanja, pembayaran tunai, transfer, dan utang
 - Tabel daftar semua transaksi
 - **Export ke Excel** dengan 2 sheet (Transaksi & Detail Barang)

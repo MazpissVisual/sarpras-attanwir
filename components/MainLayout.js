@@ -8,10 +8,10 @@ export default function MainLayout({ children }) {
   const { user, loading } = useAuth();
   const pathname = usePathname();
   
-  const isLoginPage = pathname === '/login';
+  const isPublicPage = pathname === '/login' || pathname.startsWith('/cek-peminjaman');
 
-  // If on login page, just show children
-  if (isLoginPage) {
+  // If on public page, just show children
+  if (isPublicPage) {
     return <>{children}</>;
   }
 

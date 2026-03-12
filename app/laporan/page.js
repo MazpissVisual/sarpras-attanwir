@@ -27,6 +27,11 @@ export default function LaporanPage() {
 
   const [bulan, setBulan] = useState(now.getMonth());
   const [tahun, setTahun] = useState(now.getFullYear());
+  const [kategori, setKategori] = useState('all');
+  const [metode, setMetode] = useState('all');
+  const [status, setStatus] = useState('all');
+  const [search, setSearch] = useState('');
+  
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
@@ -59,6 +64,13 @@ export default function LaporanPage() {
         }
       }
 
+      if (kategori !== 'all') query = query.eq('kategori', kategori);
+      if (metode !== 'all') query = query.eq('metode_bayar', metode);
+      if (status !== 'all') query = query.eq('status_lunas', status === 'lunas');
+      if (search.trim()) {
+        query = query.or(`judul.ilike.%${search}%,toko.ilike.%${search}%`);
+      }
+
       const { data, error } = await query;
       if (error) throw error;
       setTransactions(data || []);
@@ -82,7 +94,7 @@ export default function LaporanPage() {
     } finally {
       setLoading(false);
     }
-  }, [bulan, tahun, addToast]);
+  }, [bulan, tahun, kategori, metode, status, search, addToast]);
 
   useEffect(() => {
     fetchData();
@@ -130,45 +142,89 @@ export default function LaporanPage() {
       <div className="pageContent">
         {/* Filter Bar */}
         <div className={styles.filterBar}>
-          <div className={styles.filterGroup}>
-            <label className="formLabel">Bulan</label>
-            <select className="formSelect" value={bulan} onChange={(e) => setBulan(e.target.value === 'all' ? 'all' : Number(e.target.value))}>
-              <option value="all">Semua Bulan</option>
-              {MONTHS.map((m, i) => (
-                <option key={i} value={i}>{m}</option>
-              ))}
-            </select>
+          <div className={styles.filterRow}>
+            <div className={styles.filterGroup} style={{ flex: 2 }}>
+              <label className="formLabel">Cari</label>
+              <div className={styles.searchInputWrapper}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <input 
+                  type="text" 
+                  className="formInput" 
+                  placeholder="Judul / Toko..." 
+                  value={search} 
+                  onChange={(e) => setSearch(e.target.value)} 
+                />
+              </div>
+            </div>
+            <div className={styles.filterGroup}>
+              <label className="formLabel">Bulan</label>
+              <select className="formSelect" value={bulan} onChange={(e) => setBulan(e.target.value === 'all' ? 'all' : Number(e.target.value))}>
+                <option value="all">Semua Bulan</option>
+                {MONTHS.map((m, i) => (
+                  <option key={i} value={i}>{m}</option>
+                ))}
+              </select>
+            </div>
+            <div className={styles.filterGroup}>
+              <label className="formLabel">Tahun</label>
+              <select className="formSelect" value={tahun} onChange={(e) => setTahun(e.target.value === 'all' ? 'all' : Number(e.target.value))}>
+                <option value="all">Semua Tahun</option>
+                {[2024, 2025, 2026, 2027].map((y) => (
+                  <option key={y} value={y}>{y}</option>
+                ))}
+              </select>
+            </div>
           </div>
-          <div className={styles.filterGroup}>
-            <label className="formLabel">Tahun</label>
-            <select className="formSelect" value={tahun} onChange={(e) => setTahun(e.target.value === 'all' ? 'all' : Number(e.target.value))}>
-              <option value="all">Semua Tahun</option>
-              {[2024, 2025, 2026, 2027].map((y) => (
-                <option key={y} value={y}>{y}</option>
-              ))}
-            </select>
+
+          <div className={styles.filterRow}>
+            <div className={styles.filterGroup}>
+              <label className="formLabel">Kategori</label>
+              <select className="formSelect" value={kategori} onChange={(e) => setKategori(e.target.value)}>
+                <option value="all">Semua Kategori</option>
+                {['listrik', 'bangunan', 'atk', 'kebersihan', 'elektronik', 'furniture', 'lainnya'].map(k => (
+                  <option key={k} value={k}>{k.charAt(0).toUpperCase() + k.slice(1)}</option>
+                ))}
+              </select>
+            </div>
+            <div className={styles.filterGroup}>
+              <label className="formLabel">Metode</label>
+              <select className="formSelect" value={metode} onChange={(e) => setMetode(e.target.value)}>
+                <option value="all">Semua Metode</option>
+                <option value="cash">Cash</option>
+                <option value="transfer">Transfer</option>
+                <option value="utang">Utang</option>
+              </select>
+            </div>
+            <div className={styles.filterGroup}>
+              <label className="formLabel">Status</label>
+              <select className="formSelect" value={status} onChange={(e) => setStatus(e.target.value)}>
+                <option value="all">Semua Status</option>
+                <option value="lunas">Lunas</option>
+                <option value="belum">Belum Lunas</option>
+              </select>
+            </div>
+            <button
+              className={`btn btnPrimary ${styles.exportBtn}`}
+              onClick={handleExport}
+              disabled={exporting || loading || transactions.length === 0}
+            >
+              {exporting ? (
+                <>
+                  <span className={styles.btnSpinner} />
+                  Mengunduh...
+                </>
+              ) : (
+                <>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="7 10 12 15 17 10" />
+                    <line x1="12" y1="15" x2="12" y2="3" />
+                  </svg>
+                  Export Excel
+                </>
+              )}
+            </button>
           </div>
-          <button
-            className={`btn btnPrimary ${styles.exportBtn}`}
-            onClick={handleExport}
-            disabled={exporting || loading || transactions.length === 0}
-          >
-            {exporting ? (
-              <>
-                <span className={styles.btnSpinner} />
-                Mengunduh...
-              </>
-            ) : (
-              <>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                  <polyline points="7 10 12 15 17 10" />
-                  <line x1="12" y1="15" x2="12" y2="3" />
-                </svg>
-                Download Rekap Belanja (Excel)
-              </>
-            )}
-          </button>
         </div>
 
         {/* Summary Cards */}

@@ -7,6 +7,7 @@ import { AuthContext } from '@/components/AuthProvider';
 import { supabase } from '@/lib/supabase';
 import { compressImage } from '@/lib/imageCompression';
 import { reduceStockFromDamage } from '@/lib/stockService';
+import { exportDamageReportsToExcel } from '@/lib/exportExcel';
 import Lightbox from '@/components/Lightbox';
 import styles from './page.module.css';
 
@@ -83,13 +84,17 @@ export default function KerusakanPage() {
   const [updatingId, setUpdatingId] = useState(null);
   const [activeTab, setActiveTab] = useState('dilaporkan');
   const [search, setSearch] = useState('');
+  const now = new Date();
+  const [bulan, setBulan] = useState(now.getMonth());
+  const [tahun, setTahun] = useState(now.getFullYear());
+  const [exporting, setExporting] = useState(false);
 
   // Modal & Files
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState('create');
   const [editingReport, setEditingReport] = useState(null);
   const [submitting, setSubmitting] = useState(false);
-  const [formData, setFormData] = useState({ nama_pelapor: '', nama_barang: '', deskripsi: '' });
+  const [formData, setFormData] = useState({ nama_pelapor: '', nama_barang: '', deskripsi: '', tempat: '' });
   const [fotos, setFotos] = useState([]);
   
   const fileInputRef = useRef(null);
@@ -107,7 +112,23 @@ export default function KerusakanPage() {
   const fetchReports = useCallback(async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase.from('damage_reports').select('*').order('created_at', { ascending: false });
+      let query = supabase.from('damage_reports').select('*').order('created_at', { ascending: false });
+      
+      if (tahun !== 'all') {
+        const startDate = bulan === 'all' 
+          ? `${tahun}-01-01T00:00:00Z` 
+          : `${tahun}-${String(bulan + 1).padStart(2, '0')}-01T00:00:00Z`;
+        
+        const nextMonth = bulan === 'all' ? 0 : (bulan + 1) % 12;
+        const nextYear = bulan === 'all' ? tahun + 1 : (nextMonth === 0 ? tahun + 1 : tahun);
+        const endDate = bulan === 'all'
+          ? `${nextYear}-01-01T00:00:00Z`
+          : `${nextYear}-${String(nextMonth + 1).padStart(2, '0')}-01T00:00:00Z`;
+
+        query = query.gte('created_at', startDate).lt('created_at', endDate);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       setReports(data || []);
     } catch (err) {
@@ -115,7 +136,7 @@ export default function KerusakanPage() {
     } finally {
       setLoading(false);
     }
-  }, [addToast]);
+  }, [bulan, tahun, addToast]);
 
   useEffect(() => { fetchReports(); }, [fetchReports]);
 
@@ -124,11 +145,34 @@ export default function KerusakanPage() {
     let res = reports;
     if (search.trim()) {
       const q = search.toLowerCase();
-      res = res.filter(r => r.nama_barang.toLowerCase().includes(q) || r.nama_pelapor.toLowerCase().includes(q));
+      res = res.filter(r => 
+        r.nama_barang.toLowerCase().includes(q) || 
+        r.nama_pelapor.toLowerCase().includes(q) ||
+        (r.tempat && r.tempat.toLowerCase().includes(q))
+      );
     }
     res = res.filter(r => r.status === activeTab);
     return res;
   }, [reports, search, activeTab]);
+
+  const handleExport = async () => {
+    if (filteredReports.length === 0) {
+      addToast('Tidak ada data untuk diekspor', 'error');
+      return;
+    }
+    setExporting(true);
+    try {
+      const months = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+      const monthText = bulan === 'all' ? 'Semua_Bulan' : months[bulan];
+      const yearText = tahun === 'all' ? 'Semua_Tahun' : tahun;
+      exportDamageReportsToExcel(filteredReports, `Laporan_Kerusakan_${monthText}_${yearText}`);
+      addToast('Laporan berhasil diunduh', 'success');
+    } catch (err) {
+      addToast('Gagal ekspor: ' + err.message, 'error');
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const countDilaporkan = reports.filter(r => r.status === 'dilaporkan').length;
   const countDiproses = reports.filter(r => r.status === 'diproses').length;
@@ -168,6 +212,7 @@ export default function KerusakanPage() {
         nama_pelapor: formData.nama_pelapor,
         nama_barang: formData.nama_barang,
         deskripsi: formData.deskripsi,
+        tempat: formData.tempat,
         foto_urls: uploadedUrls,
         foto_url: uploadedUrls[0] || null
       };
@@ -181,7 +226,7 @@ export default function KerusakanPage() {
           logActivity({
             aktivitas: 'tambah',
             modul: 'kerusakan',
-            deskripsi: `Membuat laporan kerusakan: ${formData.nama_barang}`,
+            deskripsi: `Membuat laporan kerusakan: ${formData.nama_barang} di ${formData.tempat}`,
             dataSesudah: data[0],
             userId: userProfile?.id,
             namaUser: userProfile?.full_name || userProfile?.email,
@@ -200,7 +245,7 @@ export default function KerusakanPage() {
           logActivity({
             aktivitas: 'edit',
             modul: 'kerusakan',
-            deskripsi: `Mengedit laporan kerusakan: ${formData.nama_barang}`,
+            deskripsi: `Mengedit laporan kerusakan: ${formData.nama_barang} di ${formData.tempat}`,
             dataSebelum: editingReport,
             dataSesudah: data[0],
             userId: userProfile?.id,
@@ -382,10 +427,44 @@ export default function KerusakanPage() {
             </div>
           </div>
           {!isReadOnly && (
-            <button className="btn btnPrimary" onClick={() => { setModalMode('create'); setFotos([]); setFormData({nama_pelapor:'', nama_barang:'', deskripsi:''}); setModalOpen(true); }}>
-              + Lapor Kerusakan
-            </button>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button 
+                className="btn btnSecondary" 
+                onClick={handleExport}
+                disabled={exporting || loading || filteredReports.length === 0}
+              >
+                {exporting ? '...' : (
+                  <>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px' }}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    Export
+                  </>
+                )}
+              </button>
+              <button className="btn btnPrimary" onClick={() => { setModalMode('create'); setFotos([]); setFormData({nama_pelapor:'', nama_barang:'', deskripsi:'', tempat:''}); setModalOpen(true); }}>
+                + Lapor Kerusakan
+              </button>
+            </div>
           )}
+        </div>
+
+        {/* Extra Filters (Time) */}
+        <div className={styles.extraFilters}>
+          <div className={styles.filterGroup}>
+            <label>Bulan</label>
+            <select className="formSelect" value={bulan} onChange={e => setBulan(e.target.value === 'all' ? 'all' : parseInt(e.target.value))}>
+              <option value="all">Semua Bulan</option>
+              {['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'].map((m, i) => (
+                <option key={i} value={i}>{m}</option>
+              ))}
+            </select>
+          </div>
+          <div className={styles.filterGroup}>
+            <label>Tahun</label>
+            <select className="formSelect" value={tahun} onChange={e => setTahun(e.target.value === 'all' ? 'all' : parseInt(e.target.value))}>
+              <option value="all">Semua Tahun</option>
+              {[2024, 2025, 2026, 2027].map(y => <option key={y} value={y}>{y}</option>)}
+            </select>
+          </div>
         </div>
 
         {/* --- Grid wrapper like Dashboard's tablesGrid --- */}
@@ -402,6 +481,7 @@ export default function KerusakanPage() {
                   <tr>
                     <th style={{ width: '50px' }}>#</th>
                     <th>Pelapor & Barang</th>
+                    <th>Tempat</th>
                     <th>Deskripsi</th>
                     <th className={styles.thCenter}>Foto</th>
                     <th>Status</th>
@@ -421,6 +501,7 @@ export default function KerusakanPage() {
                             <small>{formatDate(r.created_at)}</small>
                           </div>
                         </td>
+                        <td><span style={{ fontSize: '12px', fontWeight: 500 }}>{r.tempat || '—'}</span></td>
                         <td><p className={styles.colDesc}>{r.deskripsi || '—'}</p></td>
                         <td className={styles.tdCenter}>
                           {photos.length > 0 ? (
@@ -438,7 +519,7 @@ export default function KerusakanPage() {
                         {!isReadOnly && (
                           <td className={styles.tdCenter}>
                             <div className={styles.actionBtns}>
-                              <button className={styles.iconBtn} onClick={() => { setModalMode('edit'); setEditingReport(r); setFormData({nama_pelapor:r.nama_pelapor, nama_barang:r.nama_barang, deskripsi:r.deskripsi||''}); setFotos(photos.map(url=>({url, preview:url, isNew:false}))); setModalOpen(true); }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg></button>
+                             <button className={styles.iconBtn} onClick={() => { setModalMode('edit'); setEditingReport(r); setFormData({nama_pelapor:r.nama_pelapor, nama_barang:r.nama_barang, deskripsi:r.deskripsi||'', tempat:r.tempat||''}); setFotos(photos.map(url=>({url, preview:url, isNew:false}))); setModalOpen(true); }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg></button>
                               <button className={`${styles.iconBtn} ${styles.iconBtnDanger}`} onClick={() => handleDelete(r.id)}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg></button>
                             </div>
                           </td>
@@ -472,6 +553,10 @@ export default function KerusakanPage() {
                   <label className="formLabel">Nama Barang</label>
                   <input type="text" className="formInput" value={formData.nama_barang} onChange={e => setFormData({...formData, nama_barang:e.target.value})} required />
                 </div>
+              </div>
+              <div className="formGroup">
+                <label className="formLabel">Tempat / Lokasi</label>
+                <input type="text" className="formInput" value={formData.tempat} onChange={e => setFormData({...formData, tempat:e.target.value})} placeholder="Contoh: Kelas 3A, Gudang, dll" required />
               </div>
               <div className="formGroup">
                 <label className="formLabel">Deskripsi</label>

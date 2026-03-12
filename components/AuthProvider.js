@@ -157,7 +157,11 @@ export const AuthProvider = ({ children }) => {
   // Watch auth state vs current path for redirection
   useEffect(() => {
     if (loading) return;
-    if (!user && pathname !== '/login') {
+    
+    // Check if the route is public
+    const isPublic = pathname === '/login' || pathname.startsWith('/cek-peminjaman');
+
+    if (!user && !isPublic) {
       router.push('/login');
     } else if (user && pathname === '/login') {
       router.push('/');
