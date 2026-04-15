@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import styles from './page.module.css';
-import Link from 'next/link';
 
 export default function CekPeminjamanPage() {
   const [phone, setPhone] = useState('');
@@ -142,11 +141,6 @@ export default function CekPeminjamanPage() {
         </div>
       </div>
       
-      <div style={{ marginTop: '30px', textAlign: 'center' }}>
-         <Link href="/login" style={{ fontSize: '13px', color: '#64748b', textDecoration: 'none', fontWeight: 600 }}>
-             Dashboard Admin
-         </Link>
-      </div>
     </div>
   );
 }

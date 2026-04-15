@@ -7,6 +7,7 @@ import { useToast } from '@/components/Toast';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { createUserAction, deleteUserAction, updateUserAction, getUsersAction } from '@/app/actions/user';
+import { resetDataAction } from '@/app/actions/maintenance';
 import styles from './page.module.css';
 
 const ACCESS_RIGHTS_OPTIONS = [
@@ -147,6 +148,43 @@ export default function PengaturanUserPage() {
     }
   };
 
+  // Maintenance States
+  const [resetRanges, setResetRanges] = useState({
+    peminjaman: 0,
+    transaksi: 0,
+    laporan: 0
+  });
+  const [resetLoading, setResetLoading] = useState(null); // 'peminjaman' | 'transaksi' | 'laporan'
+
+  const handleResetData = async (module) => {
+    const months = resetRanges[module];
+    const moduleName = module === 'peminjaman' ? 'Peminjaman' : module === 'transaksi' ? 'Transaksi & Belanja' : 'Laporan & Log';
+    const rangeName = months === 0 ? 'SEMUA DATA' : `data yang lebih lama dari ${months} bulan`;
+
+    if (!confirm(`PERINGATAN KRITIKAL!\n\nAnda akan menghapus ${moduleName} (${rangeName}).\nTindakan ini tidak dapat dibatalkan.\n\nApakah Anda yakin ingin melanjutkan?`)) {
+      return;
+    }
+
+    const confirmation = prompt(`Ketik "KONFIRMASI" untuk melanjutkan penghapusan ${moduleName}:`);
+    if (confirmation !== 'KONFIRMASI') {
+      return addToast('Reset dibatalkan. Konfirmasi teks salah.', 'info');
+    }
+
+    try {
+      setResetLoading(module);
+      const res = await resetDataAction(module, months, userProfile);
+      if (res.success) {
+        addToast(res.message, 'success');
+      } else {
+        throw new Error(res.error);
+      }
+    } catch (err) {
+      addToast('Gagal mereset data: ' + err.message, 'error');
+    } finally {
+      setResetLoading(null);
+    }
+  };
+
   if (authLoading && !userProfile) {
     return (
       <div className="pageContent" style={{ display: 'flex', justifyContent: 'center', padding: '100px' }}>
@@ -250,6 +288,92 @@ export default function PengaturanUserPage() {
               </tbody>
             </table>
           )}
+        {/* Maintenance Section (Super Admin Only) */}
+        <div className={styles.maintenanceSection}>
+          <div className={styles.maintenanceHeader}>
+            <h2>Pemeliharaan Sistem & Data</h2>
+            <p>Bersihkan data lama untuk mengoptimalkan performa database. Hati-hati, tindakan ini permanen.</p>
+          </div>
+
+          <div className={styles.maintenanceGrid}>
+             {/* Card Peminjaman */}
+             <div className={styles.maintenanceCard}>
+               <div className={styles.cardTitle}>
+                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+                 Data Peminjaman
+               </div>
+               <p className={styles.cardDesc}>Menghapus riwayat reservasi barang, ruangan, dan kendaraan.</p>
+               <select 
+                 className={styles.rangeSelect} 
+                 value={resetRanges.peminjaman}
+                 onChange={e => setResetRanges({...resetRanges, peminjaman: parseInt(e.target.value)})}
+               >
+                 <option value={0}>Hapus Seluruh Data</option>
+                 <option value={3}>Lebih dari 3 Bulan</option>
+                 <option value={6}>Lebih dari 6 Bulan</option>
+                 <option value={12}>Lebih dari 1 Tahun</option>
+               </select>
+               <button 
+                 className={styles.dangerBtn} 
+                 onClick={() => handleResetData('peminjaman')}
+                 disabled={resetLoading === 'peminjaman'}
+               >
+                 {resetLoading === 'peminjaman' ? 'Memproses...' : 'Reset Data Peminjaman'}
+               </button>
+             </div>
+
+             {/* Card Transaksi */}
+             <div className={styles.maintenanceCard}>
+               <div className={styles.cardTitle}>
+                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+                 Data Transaksi & Belanja
+               </div>
+               <p className={styles.cardDesc}>Menghapus riwayat transaksi POS dan nota belanja barang.</p>
+               <select 
+                 className={styles.rangeSelect}
+                 value={resetRanges.transaksi}
+                 onChange={e => setResetRanges({...resetRanges, transaksi: parseInt(e.target.value)})}
+               >
+                 <option value={0}>Hapus Seluruh Data</option>
+                 <option value={3}>Lebih dari 3 Bulan</option>
+                 <option value={6}>Lebih dari 6 Bulan</option>
+                 <option value={12}>Lebih dari 1 Tahun</option>
+               </select>
+               <button 
+                 className={styles.dangerBtn} 
+                 onClick={() => handleResetData('transaksi')}
+                 disabled={resetLoading === 'transaksi'}
+               >
+                 {resetLoading === 'transaksi' ? 'Memproses...' : 'Reset Data Transaksi'}
+               </button>
+             </div>
+
+             {/* Card Laporan & Log */}
+             <div className={styles.maintenanceCard}>
+               <div className={styles.cardTitle}>
+                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                 Laporan & Aktivitas
+               </div>
+               <p className={styles.cardDesc}>Menghapus log aktivitas user, laporan kerusakan, dan riwayat stok.</p>
+               <select 
+                 className={styles.rangeSelect}
+                 value={resetRanges.laporan}
+                 onChange={e => setResetRanges({...resetRanges, laporan: parseInt(e.target.value)})}
+               >
+                 <option value={0}>Hapus Seluruh Data</option>
+                 <option value={3}>Lebih dari 3 Bulan</option>
+                 <option value={6}>Lebih dari 6 Bulan</option>
+                 <option value={12}>Lebih dari 1 Tahun</option>
+               </select>
+               <button 
+                 className={styles.dangerBtn} 
+                 onClick={() => handleResetData('laporan')}
+                 disabled={resetLoading === 'laporan'}
+               >
+                 {resetLoading === 'laporan' ? 'Memproses...' : 'Reset Data Laporan'}
+               </button>
+             </div>
+          </div>
         </div>
       </div>
 
