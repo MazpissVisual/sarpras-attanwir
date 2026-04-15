@@ -156,6 +156,12 @@ export default function LoginPage() {
             </form>
 
             <div className={styles.footerInfo}>
+              <div className={styles.publicLinks}>
+                <a href="/cek-peminjaman" className={styles.publicLink}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{marginRight: '6px'}}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                  Cek Status Peminjaman (Publik)
+                </a>
+              </div>
               <p>Sistem Manajemen Inventaris Sekolah</p>
               <p className={styles.copyright}>&copy; {new Date().getFullYear()} Sarpras PontrenMU Attanwir</p>
             </div>

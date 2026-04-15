@@ -268,6 +268,34 @@
   font-size: 12px;
 }
 
+.publicLinks {
+  margin-top: -10px;
+  margin-bottom: 24px;
+  display: flex;
+  justify-content: center;
+}
+
+.publicLink {
+  display: inline-flex;
+  align-items: center;
+  background: #f1f5f9;
+  color: #475569;
+  padding: 8px 16px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.2s;
+  border: 1px solid #e2e8f0;
+}
+
+.publicLink:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+  border-color: #cbd5e1;
+  transform: translateY(-1px);
+}
+
 /* RIGHT COLUMN (VISUAL) */
 .rightCol {
   flex: 1;

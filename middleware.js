@@ -24,6 +24,7 @@ export function middleware(req) {
   if (
     path.startsWith('/login') ||
     path.startsWith('/unauthorized') ||
+    path.startsWith('/cek-peminjaman') ||
     path.startsWith('/_next') ||
     path.startsWith('/api/') ||
     path.includes('.')
