@@ -34,8 +34,13 @@ export default function InventarisPage() {
   // Search & filter
   const [search, setSearch] = useState('');
   const [filterKategori, setFilterKategori] = useState('semua');
-  const [filterLokasi, setFilterLokasi] = useState('semua');
+  const [filterLokasi, setFilterLokasi] = useState([]); // Array of strings
+  const [filterRuangan, setFilterRuangan] = useState([]); // Array of strings
   const [filterStock, setFilterStock] = useState('semua'); // semua | low | ok
+
+  // Custom Multi-select open states
+  const [locMenuOpen, setLocMenuOpen] = useState(false);
+  const [ruangMenuOpen, setRuangMenuOpen] = useState(false);
 
   // Modal — tambah/edit barang
   const [modalOpen, setModalOpen] = useState(false);
@@ -47,6 +52,7 @@ export default function InventarisPage() {
     stok_saat_ini: 0,
     satuan: 'pcs',
     lokasi_penyimpanan: '',
+    ruangan: '',
   });
   const [submitting, setSubmitting] = useState(false);
 
@@ -76,7 +82,7 @@ export default function InventarisPage() {
 
   useEffect(() => { fetchItems(); }, [fetchItems]);
 
-  // Extract unique locations for filter
+  // Extract unique locations (Buildings)
   const lokasiOptions = useMemo(() => {
     const locs = items
       .map(item => item.lokasi_penyimpanan)
@@ -85,19 +91,52 @@ export default function InventarisPage() {
     return [...new Set(locs)].sort();
   }, [items]);
 
+  // Extract unique rooms based on selected location (Linked Filter)
+  const ruanganOptions = useMemo(() => {
+    let filteredForRooms = items;
+    if (filterLokasi !== 'semua') {
+      filteredForRooms = items.filter(item => item.lokasi_penyimpanan === filterLokasi);
+    }
+    const rooms = filteredForRooms
+      .map(item => item.ruangan)
+      .filter(r => r && r.trim() !== '')
+      .map(r => r.trim());
+    return [...new Set(rooms)].sort();
+  }, [items, filterLokasi]);
+
+  // Reset Ruangan filter if Lokasi changes
+  useEffect(() => {
+    setFilterRuangan([]);
+  }, [filterLokasi]);
+
+  // Click outside to close menus
+  useEffect(() => {
+    const handleClickOutside = () => {
+      setLocMenuOpen(false);
+      setRuangMenuOpen(false);
+    };
+    window.addEventListener('click', handleClickOutside);
+    return () => window.removeEventListener('click', handleClickOutside);
+  }, []);
+
   // ===== FILTERED & SEARCHED =====
   const filteredItems = useMemo(() => {
     let result = items;
 
     // Search
     if (search.trim()) {
-      const q = search.toLowerCase();
-      result = result.filter(
-        (item) =>
-          item.nama_barang.toLowerCase().includes(q) ||
-          (item.lokasi_penyimpanan || '').toLowerCase().includes(q) ||
-          item.kategori.toLowerCase().includes(q)
-      );
+      const keywords = search.toLowerCase().split(',').map(k => k.trim()).filter(k => k !== '');
+      result = result.filter((item) => {
+        const name = item.nama_barang.toLowerCase();
+        const loc = (item.lokasi_penyimpanan || '').toLowerCase();
+        const cat = item.kategori.toLowerCase();
+        
+        return keywords.some(k => 
+          name.includes(k) || 
+          loc.includes(k) || 
+          cat.includes(k)
+        );
+      });
     }
 
     // Filter kategori
@@ -105,9 +144,14 @@ export default function InventarisPage() {
       result = result.filter((item) => item.kategori === filterKategori);
     }
 
-    // Filter lokasi
-    if (filterLokasi !== 'semua') {
-      result = result.filter((item) => (item.lokasi_penyimpanan || '').trim() === filterLokasi);
+    // Filter lokasi (Gedung) - Multiple
+    if (filterLokasi.length > 0) {
+      result = result.filter((item) => filterLokasi.includes((item.lokasi_penyimpanan || '').trim()));
+    }
+
+    // Filter ruangan - Multiple
+    if (filterRuangan.length > 0) {
+      result = result.filter((item) => filterRuangan.includes((item.ruangan || '').trim()));
     }
 
     // Filter stock
@@ -118,7 +162,7 @@ export default function InventarisPage() {
     }
 
     return result;
-  }, [items, search, filterKategori, filterLokasi, filterStock]);
+  }, [items, search, filterKategori, filterLokasi, filterRuangan, filterStock]);
 
   // Stats
   const totalItems = items.length;
@@ -136,9 +180,10 @@ export default function InventarisPage() {
         .insert([{
           nama_barang: formData.nama_barang.trim(),
           kategori: formData.kategori,
-          stok_saat_ini: parseInt(formData.stok_saat_ini) || 0,
+           stok_saat_ini: parseInt(formData.stok_saat_ini) || 0,
           satuan: formData.satuan,
           lokasi_penyimpanan: formData.lokasi_penyimpanan.trim() || null,
+          ruangan: formData.ruangan.trim() || null,
         }])
         .select()
         .single();
@@ -179,9 +224,10 @@ export default function InventarisPage() {
         .update({
           nama_barang: formData.nama_barang.trim(),
           kategori: formData.kategori,
-          stok_saat_ini: parseInt(formData.stok_saat_ini) || 0,
+           stok_saat_ini: parseInt(formData.stok_saat_ini) || 0,
           satuan: formData.satuan,
           lokasi_penyimpanan: formData.lokasi_penyimpanan.trim() || null,
+          ruangan: formData.ruangan.trim() || null,
         })
         .eq('id', editingItem.id)
         .select()
@@ -290,8 +336,8 @@ export default function InventarisPage() {
   // ===== Modal Helpers =====
   const openCreateModal = () => {
     setModalMode('create');
-    setEditingItem(null);
-    setFormData({ nama_barang: '', kategori: 'lainnya', stok_saat_ini: 0, satuan: 'pcs', lokasi_penyimpanan: '' });
+     setEditingItem(null);
+    setFormData({ nama_barang: '', kategori: 'lainnya', stok_saat_ini: 0, satuan: 'pcs', lokasi_penyimpanan: '', ruangan: '' });
     setModalOpen(true);
   };
 
@@ -304,6 +350,7 @@ export default function InventarisPage() {
       stok_saat_ini: item.stok_saat_ini,
       satuan: item.satuan,
       lokasi_penyimpanan: item.lokasi_penyimpanan || '',
+      ruangan: item.ruangan || '',
     });
     setModalOpen(true);
   };
@@ -342,10 +389,11 @@ export default function InventarisPage() {
       return;
     }
     
-    try {
+     try {
       const catText = filterKategori === 'semua' ? '' : `_${filterKategori}`;
-      const locText = filterLokasi === 'semua' ? '' : `_${filterLokasi.replace(/\s+/g, '_')}`;
-      const filename = `Inventaris${catText}${locText}`;
+      const locText = filterLokasi.length === 0 ? '' : filterLokasi.length === 1 ? `_${filterLokasi[0]}` : `_Multi_Lokasi`;
+      const ruangText = filterRuangan.length === 0 ? '' : filterRuangan.length === 1 ? `_${filterRuangan[0]}` : `_Multi_Ruangan`;
+      const filename = `Inventaris${catText}${locText}${ruangText}`.replace(/\s+/g, '_');
       
       exportInventoryToExcel(filteredItems, filename);
       addToast('Data inventaris berhasil diekspor', 'success');
@@ -389,7 +437,7 @@ export default function InventarisPage() {
             </svg>
             <input
               type="text"
-              placeholder="Cari nama barang, lokasi, atau kategori..."
+              placeholder="Cari nama, lokasi, atau kategori (gunakan koma untuk banyak barang)..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className={styles.searchInput}
@@ -410,12 +458,81 @@ export default function InventarisPage() {
                 <option key={k.value} value={k.value}>{k.label}</option>
               ))}
             </select>
-            <select className={styles.filterSelect} value={filterLokasi} onChange={(e) => setFilterLokasi(e.target.value)}>
-              <option value="semua">Semua Lokasi</option>
-              {lokasiOptions.map((loc) => (
-                <option key={loc} value={loc}>{loc}</option>
-              ))}
-            </select>
+
+            {/* Custom Multi-Select: Lokasi/Gedung */}
+            <div className={styles.multiSelectContainer} onClick={(e) => e.stopPropagation()}>
+              <button className={styles.multiSelectBtn} onClick={() => { setLocMenuOpen(!locMenuOpen); setRuangMenuOpen(false); }}>
+                <span className={styles.multiSelectLabel}>
+                  {filterLokasi.length === 0 ? 'Semua Lokasi' : filterLokasi.length === 1 ? filterLokasi[0] : `${filterLokasi.length} Lokasi terpilih`}
+                </span>
+                {filterLokasi.length > 0 && <span className={styles.multiSelectBadge}>{filterLokasi.length}</span>}
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+              {locMenuOpen && (
+                <div className={styles.multiSelectMenu}>
+                  {lokasiOptions.map((loc) => (
+                    <label key={loc} className={styles.multiSelectItem}>
+                      <input 
+                        type="checkbox" 
+                        checked={filterLokasi.includes(loc)}
+                        onChange={(e) => {
+                          if (e.target.checked) setFilterLokasi([...filterLokasi, loc]);
+                          else setFilterLokasi(filterLokasi.filter(l => l !== loc));
+                        }}
+                      />
+                      <span className={styles.multiSelectLabel}>{loc}</span>
+                    </label>
+                  ))}
+                  {lokasiOptions.length > 0 && (
+                     <button 
+                        className={styles.multiSelectItem} 
+                        style={{ borderTop: '1px solid #eee', marginTop: '4px', background: '#f8fafc', fontWeight: 600 }}
+                        onClick={() => setFilterLokasi(filterLokasi.length === lokasiOptions.length ? [] : [...lokasiOptions])}
+                      >
+                        {filterLokasi.length === lokasiOptions.length ? 'Kosongkan Semua' : 'Pilih Semua'}
+                      </button>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Custom Multi-Select: Ruangan */}
+            <div className={styles.multiSelectContainer} onClick={(e) => e.stopPropagation()}>
+              <button className={styles.multiSelectBtn} onClick={() => { setRuangMenuOpen(!ruangMenuOpen); setLocMenuOpen(false); }}>
+                <span className={styles.multiSelectLabel}>
+                  {filterRuangan.length === 0 ? 'Semua Ruangan' : filterRuangan.length === 1 ? filterRuangan[0] : `${filterRuangan.length} Ruangan terpilih`}
+                </span>
+                {filterRuangan.length > 0 && <span className={styles.multiSelectBadge}>{filterRuangan.length}</span>}
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+              {ruangMenuOpen && (
+                <div className={styles.multiSelectMenu}>
+                  {ruanganOptions.map((r) => (
+                    <label key={r} className={styles.multiSelectItem}>
+                      <input 
+                        type="checkbox" 
+                        checked={filterRuangan.includes(r)}
+                        onChange={(e) => {
+                          if (e.target.checked) setFilterRuangan([...filterRuangan, r]);
+                          else setFilterRuangan(filterRuangan.filter(item => item !== r));
+                        }}
+                      />
+                      <span className={styles.multiSelectLabel}>{r}</span>
+                    </label>
+                  ))}
+                  {ruanganOptions.length > 0 && (
+                     <button 
+                        className={styles.multiSelectItem} 
+                        style={{ borderTop: '1px solid #eee', marginTop: '4px', background: '#f8fafc', fontWeight: 600 }}
+                        onClick={() => setFilterRuangan(filterRuangan.length === ruanganOptions.length ? [] : [...ruanganOptions])}
+                      >
+                        {filterRuangan.length === ruanganOptions.length ? 'Kosongkan Semua' : 'Pilih Semua'}
+                      </button>
+                  )}
+                </div>
+              )}
+            </div>
+
             <select className={styles.filterSelect} value={filterStock} onChange={(e) => setFilterStock(e.target.value)}>
               <option value="semua">Semua Stok</option>
               <option value="low">⚠️ Stok Rendah (&lt;5)</option>
@@ -466,9 +583,9 @@ export default function InventarisPage() {
                   <thead>
                     <tr>
                       <th>Nama Barang</th>
-                      <th>Kategori</th>
+                       <th>Kategori</th>
                       <th className={styles.thCenter}>Stok</th>
-                      <th>Lokasi</th>
+                      <th>Lokasi & Ruangan</th>
                       {!isReadOnly && <th className={styles.thCenter}>Aksi</th>}
                     </tr>
                   </thead>
@@ -497,8 +614,11 @@ export default function InventarisPage() {
                               <small>{item.satuan}</small>
                             </div>
                           </td>
-                          <td>
-                            <span className={styles.lokasi}>{item.lokasi_penyimpanan || '—'}</span>
+                           <td>
+                            <div className={styles.lokasi}>
+                              <strong>{item.lokasi_penyimpanan || '—'}</strong>
+                              {item.ruangan && <div className={styles.ruanganText}>{item.ruangan}</div>}
+                            </div>
                           </td>
                           {!isReadOnly && (
                             <td className={styles.tdCenter}>
@@ -543,6 +663,7 @@ export default function InventarisPage() {
                               {KATEGORI_OPTIONS.find((k) => k.value === item.kategori)?.label || item.kategori}
                             </span>
                             {item.lokasi_penyimpanan && <span className={styles.lokasi}>{item.lokasi_penyimpanan}</span>}
+                            {item.ruangan && <span className={styles.lokasi}>{item.ruangan}</span>}
                           </div>
                         </div>
                         <div className={`${styles.stockBadge} ${styles[`stock_${level}`]}`}>
@@ -612,9 +733,13 @@ export default function InventarisPage() {
                     <label className="formLabel">Stok Awal</label>
                     <input type="number" className="formInput" min="0" value={formData.stok_saat_ini} onChange={(e) => setFormData({ ...formData, stok_saat_ini: e.target.value })} />
                   </div>
+                   <div className="formGroup">
+                    <label className="formLabel">Lokasi / Gedung</label>
+                    <input type="text" className="formInput" placeholder="Contoh: Gedung A" value={formData.lokasi_penyimpanan} onChange={(e) => setFormData({ ...formData, lokasi_penyimpanan: e.target.value })} />
+                  </div>
                   <div className="formGroup">
-                    <label className="formLabel">Lokasi Penyimpanan</label>
-                    <input type="text" className="formInput" placeholder="Contoh: Gudang A Rak 3" value={formData.lokasi_penyimpanan} onChange={(e) => setFormData({ ...formData, lokasi_penyimpanan: e.target.value })} />
+                    <label className="formLabel">Ruangan</label>
+                    <input type="text" className="formInput" placeholder="Contoh: Kamar 01" value={formData.ruangan} onChange={(e) => setFormData({ ...formData, ruangan: e.target.value })} />
                   </div>
                 </div>
                 <div className={styles.formActions}>
