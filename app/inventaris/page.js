@@ -34,6 +34,7 @@ export default function InventarisPage() {
   // Search & filter
   const [search, setSearch] = useState('');
   const [filterKategori, setFilterKategori] = useState('semua');
+  const [filterLokasi, setFilterLokasi] = useState('semua');
   const [filterStock, setFilterStock] = useState('semua'); // semua | low | ok
 
   // Modal — tambah/edit barang
@@ -75,6 +76,15 @@ export default function InventarisPage() {
 
   useEffect(() => { fetchItems(); }, [fetchItems]);
 
+  // Extract unique locations for filter
+  const lokasiOptions = useMemo(() => {
+    const locs = items
+      .map(item => item.lokasi_penyimpanan)
+      .filter(loc => loc && loc.trim() !== '')
+      .map(loc => loc.trim());
+    return [...new Set(locs)].sort();
+  }, [items]);
+
   // ===== FILTERED & SEARCHED =====
   const filteredItems = useMemo(() => {
     let result = items;
@@ -95,6 +105,11 @@ export default function InventarisPage() {
       result = result.filter((item) => item.kategori === filterKategori);
     }
 
+    // Filter lokasi
+    if (filterLokasi !== 'semua') {
+      result = result.filter((item) => (item.lokasi_penyimpanan || '').trim() === filterLokasi);
+    }
+
     // Filter stock
     if (filterStock === 'low') {
       result = result.filter((item) => item.stok_saat_ini < LOW_STOCK_THRESHOLD);
@@ -103,7 +118,7 @@ export default function InventarisPage() {
     }
 
     return result;
-  }, [items, search, filterKategori, filterStock]);
+  }, [items, search, filterKategori, filterLokasi, filterStock]);
 
   // Stats
   const totalItems = items.length;
@@ -328,7 +343,11 @@ export default function InventarisPage() {
     }
     
     try {
-      exportInventoryToExcel(filteredItems, 'Data_Inventaris');
+      const catText = filterKategori === 'semua' ? '' : `_${filterKategori}`;
+      const locText = filterLokasi === 'semua' ? '' : `_${filterLokasi.replace(/\s+/g, '_')}`;
+      const filename = `Inventaris${catText}${locText}`;
+      
+      exportInventoryToExcel(filteredItems, filename);
       addToast('Data inventaris berhasil diekspor', 'success');
     } catch (err) {
       console.error(err);
@@ -389,6 +408,12 @@ export default function InventarisPage() {
               <option value="semua">Semua Kategori</option>
               {KATEGORI_OPTIONS.map((k) => (
                 <option key={k.value} value={k.value}>{k.label}</option>
+              ))}
+            </select>
+            <select className={styles.filterSelect} value={filterLokasi} onChange={(e) => setFilterLokasi(e.target.value)}>
+              <option value="semua">Semua Lokasi</option>
+              {lokasiOptions.map((loc) => (
+                <option key={loc} value={loc}>{loc}</option>
               ))}
             </select>
             <select className={styles.filterSelect} value={filterStock} onChange={(e) => setFilterStock(e.target.value)}>
