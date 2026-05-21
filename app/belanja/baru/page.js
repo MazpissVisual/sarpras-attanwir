@@ -18,6 +18,7 @@ const KATEGORI_OPTIONS = [
   { value: 'kebersihan', label: 'Kebersihan' },
   { value: 'elektronik', label: 'Elektronik' },
   { value: 'furniture', label: 'Furniture' },
+  { value: 'dapur', label: 'Dapur / Perdapuran' },
   { value: 'lainnya', label: 'Lainnya' },
 ];
 

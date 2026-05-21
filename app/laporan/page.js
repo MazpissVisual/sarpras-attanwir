@@ -181,8 +181,8 @@ export default function LaporanPage() {
               <label className="formLabel">Kategori</label>
               <select className="formSelect" value={kategori} onChange={(e) => setKategori(e.target.value)}>
                 <option value="all">Semua Kategori</option>
-                {['listrik', 'bangunan', 'atk', 'kebersihan', 'elektronik', 'furniture', 'lainnya'].map(k => (
-                  <option key={k} value={k}>{k.charAt(0).toUpperCase() + k.slice(1)}</option>
+                {['listrik', 'bangunan', 'atk', 'kebersihan', 'elektronik', 'furniture', 'dapur', 'lainnya'].map(k => (
+                  <option key={k} value={k}>{k === 'dapur' ? 'Dapur / Perdapuran' : k.charAt(0).toUpperCase() + k.slice(1)}</option>
                 ))}
               </select>
             </div>

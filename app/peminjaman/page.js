@@ -101,7 +101,8 @@ export default function PeminjamanPage() {
     tujuan_peminjaman: '',
     tanggal_mulai: '',
     tanggal_selesai: '',
-    nomor_hp: ''
+    nomor_hp: '',
+    jumlah_peserta: 0
   });
   const [submittingForm, setSubmittingForm] = useState(false);
 
@@ -256,9 +257,17 @@ export default function PeminjamanPage() {
   const openForm = (mode, data = null) => {
     setFormMode(mode);
     if (mode === 'edit' && data) {
-      // Convert ke format string "YYYY-MM-DDThh:mm" untuk datetime-local input
-      const startIso = data.tanggal_mulai ? new Date(data.tanggal_mulai).toISOString().slice(0,16) : '';
-      const endIso = data.tanggal_selesai ? new Date(data.tanggal_selesai).toISOString().slice(0,16) : '';
+      // Convert ke format string "YYYY-MM-DDThh:mm" untuk datetime-local input (Local Time)
+      const toLocalISO = (dateStr) => {
+        if (!dateStr) return '';
+        const d = new Date(dateStr);
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        const hour = String(d.getHours()).padStart(2, '0');
+        const minute = String(d.getMinutes()).padStart(2, '0');
+        return `${year}-${month}-${day}T${hour}:${minute}`;
+      };
 
       setFormData({
         id: data.id,
@@ -266,14 +275,16 @@ export default function PeminjamanPage() {
         kategori: data.kategori,
         item_dipinjam: data.item_dipinjam,
         tujuan_peminjaman: data.tujuan_peminjaman,
-        tanggal_mulai: startIso,
-        tanggal_selesai: endIso,
-        nomor_hp: data.nomor_hp || ''
+        tanggal_mulai: toLocalISO(data.tanggal_mulai),
+        tanggal_selesai: toLocalISO(data.tanggal_selesai),
+        nomor_hp: data.nomor_hp || '',
+        jumlah_peserta: data.jumlah_peserta || 0
       });
     } else {
       setFormData({
         id: null, nama_peminjam: '', kategori: 'barang', item_dipinjam: '',
-        tujuan_peminjaman: '', tanggal_mulai: '', tanggal_selesai: '', nomor_hp: ''
+        tujuan_peminjaman: '', tanggal_mulai: '', tanggal_selesai: '', nomor_hp: '',
+        jumlah_peserta: 0
       });
     }
     setFormModal(true);
@@ -290,7 +301,8 @@ export default function PeminjamanPage() {
       tujuan_peminjaman: formData.tujuan_peminjaman,
       tanggal_mulai: new Date(formData.tanggal_mulai).toISOString(),
       tanggal_selesai: new Date(formData.tanggal_selesai).toISOString(),
-      nomor_hp: formData.nomor_hp
+      nomor_hp: formData.nomor_hp,
+      jumlah_peserta: parseInt(formData.jumlah_peserta) || 0
     };
 
     try {
@@ -416,6 +428,7 @@ export default function PeminjamanPage() {
                       <th style={{ width: '50px' }}>#</th>
                       <th>Pemohon & Tujuan</th>
                       <th>Kategori</th>
+                      <th>Peserta</th>
                       <th>Detail Item</th>
                       <th>Jadwal Pelaksanaan</th>
                       <th>Status</th>
@@ -435,6 +448,10 @@ export default function PeminjamanPage() {
                         </td>
                         <td>
                           <span className={styles.kategoriTag}>{r.kategori.charAt(0).toUpperCase() + r.kategori.slice(1)}</span>
+                        </td>
+                        <td>
+                           <div style={{ fontWeight: 600 }}>{r.jumlah_peserta || 0}</div>
+                           <small style={{ color: '#64748b' }}>Orang</small>
                         </td>
                         <td>
                            <div style={{ fontWeight: 600 }}>{r.item_dipinjam}</div>
@@ -554,6 +571,14 @@ export default function PeminjamanPage() {
              <div className="formGroup" style={{ marginBottom: '16px' }}>
                  <label className="formLabel">Tujuan / Keperluan</label>
                  <input type="text" className="formInput" placeholder="Misal: Rapat wali murid, Acara lomba..." value={formData.tujuan_peminjaman} onChange={e => setFormData({...formData, tujuan_peminjaman:e.target.value})} required />
+             </div>
+
+             <div className={styles.formRow}>
+                <div className="formGroup">
+                  <label className="formLabel">Estimasi Jumlah Peserta</label>
+                  <input type="number" className="formInput" placeholder="0" value={formData.jumlah_peserta} onChange={e => setFormData({...formData, jumlah_peserta:e.target.value})} />
+                </div>
+                <div className="formGroup" style={{ visibility: 'hidden' }}></div>
              </div>
 
              <div className={styles.formRow}>

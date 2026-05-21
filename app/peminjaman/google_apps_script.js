@@ -35,14 +35,45 @@ function simpanKeSupabase(e) {
     // -- PERHATIAN --
     // Sesuaikan indeks array responses[x] jika urutan form Anda berbeda.
 
-    const tglMulaiForm = responses[6];
-    const tglSelesaiForm = responses[7];
-    
     // Normalisasi Kategori ke huruf kecil
     let kategoriInput = String(responses[3]).toLowerCase().trim();
-    if (kategoriInput !== 'barang' && kategoriInput !== 'ruangan' && kategoriInput !== 'kendaraan') {
-       kategoriInput = 'barang'; 
+    // Mapping kategori jika berbeda dengan database
+    if (kategoriInput.includes('ruangan')) kategoriInput = 'ruangan';
+    else if (kategoriInput.includes('kendaraan')) kategoriInput = 'kendaraan';
+    else if (kategoriInput.includes('barang')) kategoriInput = 'barang';
+    else kategoriInput = 'barang'; // Default
+
+    // Image 3 menunjukkan Tanggal & Jam dipisah di kolom Google Sheets
+    // responses[6] = Tanggal Mulai
+    // responses[7] = Jam Mulai
+    // responses[8] = Tanggal Selesai
+    // responses[9] = Jam Selesai
+    
+    // Fungsi helper untuk parsing tanggal & jam dengan timezone WIB (GMT+7)
+    function parseDateTime(dateStr, timeStr) {
+      if (!dateStr) return new Date().toISOString();
+      
+      let d = String(dateStr).trim();
+      let t = timeStr ? String(timeStr).trim().replace('.', ':') : "00:00:00";
+      
+      // Normalisasi format DD/MM/YYYY ke YYYY-MM-DD agar aman di-parse
+      const parts = d.split('/');
+      if (parts.length === 3 && parts[0].length <= 2) {
+        d = parts[2] + "-" + parts[1] + "-" + parts[0];
+      }
+      
+      // Tambahkan timezone GMT+0700 (WIB) agar tidak geser saat dikonversi ke ISO (UTC)
+      const combined = d + " " + t + " GMT+0700";
+      const parsedDate = new Date(combined);
+      
+      if (isNaN(parsedDate.getTime())) {
+        return new Date(dateStr).toISOString(); // Fallback
+      }
+      return parsedDate.toISOString();
     }
+
+    const tglMulaiISO = parseDateTime(responses[6], responses[7]);
+    const tglSelesaiISO = parseDateTime(responses[8], responses[9]);
 
     // JSON Payload untuk dikirim ke tabel Supabase "peminjaman"
     const payload = {
@@ -51,9 +82,8 @@ function simpanKeSupabase(e) {
       kategori: kategoriInput,
       item_dipinjam: responses[4] || '-',
       tujuan_peminjaman: responses[5] || '-',
-      // Convert tanggal dari Google Sheet format (misal MM/DD/YYYY HH:mm:ss) menjadi ISO 8601 UTC
-      tanggal_mulai: tglMulaiForm ? new Date(tglMulaiForm).toISOString() : new Date().toISOString(),
-      tanggal_selesai: tglSelesaiForm ? new Date(tglSelesaiForm).toISOString() : new Date().toISOString(),
+      tanggal_mulai: tglMulaiISO,
+      tanggal_selesai: tglSelesaiISO,
       status: 'menunggu'
     };
 

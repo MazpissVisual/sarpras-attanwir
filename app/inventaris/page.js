@@ -17,6 +17,7 @@ const KATEGORI_OPTIONS = [
   { value: 'kebersihan', label: 'Kebersihan' },
   { value: 'elektronik', label: 'Elektronik' },
   { value: 'furniture', label: 'Furniture' },
+  { value: 'dapur', label: 'Dapur / Perdapuran' },
   { value: 'lainnya', label: 'Lainnya' },
 ];
 
@@ -94,8 +95,8 @@ export default function InventarisPage() {
   // Extract unique rooms based on selected location (Linked Filter)
   const ruanganOptions = useMemo(() => {
     let filteredForRooms = items;
-    if (filterLokasi !== 'semua') {
-      filteredForRooms = items.filter(item => item.lokasi_penyimpanan === filterLokasi);
+    if (filterLokasi.length > 0) {
+      filteredForRooms = items.filter(item => filterLokasi.includes((item.lokasi_penyimpanan || '').trim()));
     }
     const rooms = filteredForRooms
       .map(item => item.ruangan)

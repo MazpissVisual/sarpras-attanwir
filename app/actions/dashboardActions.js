@@ -268,6 +268,7 @@ export async function getDashboardData(opts = {}) {
     kebersihan: '#06b6d4',
     elektronik: '#8b5cf6',
     furniture: '#ec4899',
+    dapur: '#f43f5e',
     lainnya: '#6b7280',
   };
   txThisMonth.forEach(tx => {
